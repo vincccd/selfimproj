@@ -231,6 +231,14 @@ function gaugeSVG(val, id) {
 
 // ===== FITNESS =====
 let fitnessVal = 42;
+let currentStrengthMetric = 'volume';
+const strengthMetrics = [
+  { key: 'volume', label: 'Volume', color: '#8b5cf6' },
+  { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
+  { key: 'maxWeight', label: 'Max Weight', color: '#22c55e' },
+  { key: 'max1RM', label: 'Est. 1RM', color: '#f59e0b' },
+  { key: 'exercisesDone', label: 'Exercises', color: '#ef4444' },
+];
 
 const workoutMap = {1:'Chest,Bicep',5:'Chest,Bicep',2:'Shoulder,Abs',6:'Shoulder,Abs',3:'Tricep,Back',0:'Tricep,Back',4:'Run'};
 const exercises = {
@@ -258,22 +266,31 @@ function getStrengthData(days) {
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0,10);
     const dayLog = (savedData.fitnessLog || {})[dateStr];
-    let volume = 0;
+    let volume = 0, tonnage = 0, maxWeight = 0, max1RM = 0, exercisesDone = 0;
     if (dayLog) {
       Object.values(dayLog).forEach(entry => {
-        if (entry && typeof entry === 'object') volume += (entry.weight || 0) * (entry.sets || 0) * (entry.reps || 0);
+        if (entry && typeof entry === 'object') {
+          const w = entry.weight || 0, s = entry.sets || 0, r = entry.reps || 0;
+          volume += w * s * r;
+          tonnage += w * r;
+          if (w > maxWeight) maxWeight = w;
+          if (w > 0 && r > 0) { const rm = Math.round(w * (1 + r / 30)); if (rm > max1RM) max1RM = rm; }
+          if (entry.done) exercisesDone++;
+        }
       });
     }
-    data.push({ date: dateStr, volume, label: `${d.getMonth()+1}/${d.getDate()}` });
+    data.push({ date: dateStr, volume, tonnage, maxWeight, max1RM, exercisesDone, label: `${d.getMonth()+1}/${d.getDate()}` });
   }
   return data;
 }
 
 function strengthChartSVG(data) {
   if (data.length < 2) return '';
-  const volumes = data.map(d => d.volume);
-  const maxV = Math.max(...volumes, 1);
-  const W = 600, H = 200, PL = 44, PR = 16, PT = 16, PB = 32;
+  const metric = currentStrengthMetric;
+  const m = strengthMetrics.find(mm => mm.key === metric) || strengthMetrics[0];
+  const values = data.map(d => d[metric] ?? 0);
+  const maxV = Math.max(...values, 1);
+  const W = 600, H = 200, PL = 44, PR = 16, PT = 16, PB = 36;
   const cw = W - PL - PR, ch = H - PT - PB;
   const yTicks = 3;
   let extras = '';
@@ -284,7 +301,7 @@ function strengthChartSVG(data) {
   }
   const points = data.map((d, i) => {
     const x = PL + cw * i / (data.length - 1);
-    const y = PT + ch - ch * d.volume / maxV;
+    const y = PT + ch - ch * (d[metric] ?? 0) / maxV;
     return { x, y };
   });
   let linePath = `M ${points[0].x} ${points[0].y}`;
@@ -298,16 +315,21 @@ function strengthChartSVG(data) {
   });
   let dots = '';
   points.forEach((p, i) => {
-    if (data[i].volume === 0) return;
-    dots += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#8b5cf6" opacity="0.8"/>`;
+    if ((data[i][metric] ?? 0) === 0) return;
+    dots += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${m.color}" opacity="0.8"/>`;
   });
-  return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px 16px 12px;box-sizing:border-box;">
-    <div style="font-size:22px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Strength</div>
+  let btns = '';
+  strengthMetrics.forEach(sm => {
+    const active = sm.key === metric;
+    btns += `<button class="metric-btn${active ? ' active' : ''}" data-metric="${sm.key}" style="background:${active ? sm.color + '33' : 'rgba(255,255,255,0.04)'};border:1px solid ${active ? sm.color + '66' : 'rgba(255,255,255,0.08)'};color:${active ? sm.color : 'rgba(255,255,255,0.4)'};padding:4px 10px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;transition:all 0.2s ease;text-transform:uppercase;letter-spacing:0.3px;">${sm.label}</button>`;
+  });
+  return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:16px;box-sizing:border-box;">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">${btns}</div>
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
       ${extras}
-      <defs><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.01"/></linearGradient></defs>
+      <defs><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${m.color}" stop-opacity="0.25"/><stop offset="100%" stop-color="${m.color}" stop-opacity="0.01"/></linearGradient></defs>
       <path d="${areaPath}" fill="url(#sf)"/>
-      <path d="${linePath}" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.4))"/>
+      <path d="${linePath}" fill="none" stroke="${m.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px ${m.color}66)"/>
       ${dots}
     </svg>
   </div>`;
@@ -438,6 +460,16 @@ function showFitness() {
 
   if (fitnessScreen._exHandler) fitnessScreen.removeEventListener('click', fitnessScreen._exHandler);
   fitnessScreen._exHandler = (e) => {
+    const metricBtn = e.target.closest('[data-metric]');
+    if (metricBtn) {
+      const key = metricBtn.dataset.metric;
+      if (key && key !== currentStrengthMetric) {
+        currentStrengthMetric = key;
+        const sb = fitnessScreen.querySelector('.strength-board');
+        if (sb) { const h = strengthChartSVG(getStrengthData(14)); if (h) sb.outerHTML = h; }
+      }
+      return;
+    }
     if (e.target.classList.contains('ex-stat') || e.target.closest('.ex-stats')) return;
     const item = e.target.closest('[data-exercise]');
     if (!item) return;
