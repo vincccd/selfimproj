@@ -1,0 +1,19 @@
+{
+  "name": "selfimproj",
+  "version": "1.0.0",
+  "description": "A simple web application for tracking personal growth, goals, habits, and daily reflections.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mongoose": "^8.24.0"
+  }
+}
