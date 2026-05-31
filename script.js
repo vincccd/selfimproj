@@ -335,6 +335,53 @@ function strengthChartSVG(data) {
   </div>`;
 }
 
+function getExerciseData(exName, days) {
+  const data = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0,10);
+    const entry = (savedData.fitnessLog || {})[dateStr]?.[exName];
+    if (entry && typeof entry === 'object') {
+      const w = entry.weight || 0, s = entry.sets || 0, r = entry.reps || 0;
+      data.push({ date: dateStr, volume: w * s * r, tonnage: w * r, maxWeight: w, max1RM: w > 0 && r > 0 ? Math.round(w * (1 + r / 30)) : 0, exercisesDone: entry.done ? 1 : 0, label: `${d.getMonth()+1}/${d.getDate()}` });
+    } else {
+      data.push({ date: dateStr, volume: 0, tonnage: 0, maxWeight: 0, max1RM: 0, exercisesDone: 0, label: `${d.getMonth()+1}/${d.getDate()}` });
+    }
+  }
+  return data;
+}
+
+function miniChartSVG(data) {
+  const metric = currentStrengthMetric;
+  const m = strengthMetrics.find(mm => mm.key === metric) || strengthMetrics[0];
+  const values = data.map(d => d[metric] ?? 0);
+  const maxV = Math.max(...values, 1);
+  const W = 400, H = 100, PL = 24, PR = 8, PT = 6, PB = 18;
+  const cw = W - PL - PR, ch = H - PT - PB;
+  const points = data.map((d, i) => {
+    const x = PL + cw * i / (data.length - 1);
+    const y = PT + ch - ch * (d[metric] ?? 0) / maxV;
+    return { x, y };
+  });
+  let linePath = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) linePath += ` L ${points[i].x} ${points[i].y}`;
+  const areaPath = linePath + ` L ${points[points.length - 1].x} ${PT + ch} L ${points[0].x} ${PT + ch} Z`;
+  const step = Math.max(1, Math.floor(data.length / 5));
+  let labels = '';
+  data.forEach((d, i) => {
+    if (i % step !== 0 && i !== data.length - 1) return;
+    labels += `<text x="${points[i].x}" y="${H - PB + 12}" fill="rgba(255,255,255,0.2)" font-family="'SF Mono',monospace" font-size="8" text-anchor="middle">${d.label}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+    <defs><linearGradient id="mif" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${m.color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${m.color}" stop-opacity="0.01"/></linearGradient></defs>
+    <path d="${areaPath}" fill="url(#mif)"/>
+    <path d="${linePath}" fill="none" stroke="${m.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 3px ${m.color}66)"/>
+    ${labels}
+  </svg>`;
+}
+
 function buildGaugeSVG(val, todayLog) {
   const today = new Date().getDay();
   const workout = workoutMap[today];
@@ -348,15 +395,19 @@ function buildGaugeSVG(val, todayLog) {
       const data = entry && typeof entry === 'object' ? entry : { done: !!entry, weight: 0, sets: 0, reps: 0 };
       if (data.done) doneCount++;
       exList += `<div class="exercise-item${data.done ? ' completed' : ''}" data-exercise="${ex}" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:32px;color:rgba(255,255,255,0.8);animation-delay:${exIdx * 0.08}s;">
-        <span class="ex-check">${data.done ? '✓' : '○'}</span>
-        <span class="ex-name hover-pop">${ex}</span>
-        <span class="ex-stats">
-          <input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric">
-          <span class="ex-stat-label">kg</span>
-          <input type="number" class="ex-stat" data-field="sets" value="${data.sets}" min="0" inputmode="numeric">
-          <span class="ex-stat-label">×</span>
-          <input type="number" class="ex-stat" data-field="reps" value="${data.reps}" min="0" inputmode="numeric">
-        </span>
+        <div style="display:flex;align-items:center;gap:16px;width:100%;">
+          <span class="ex-check">${data.done ? '✓' : '○'}</span>
+          <span class="ex-name hover-pop">${ex}</span>
+          <button class="ex-chart-toggle" style="background:none;border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.3);cursor:pointer;font-size:12px;padding:2px 8px;border-radius:6px;transition:all 0.2s ease;font-family:inherit;">📊</button>
+          <span class="ex-stats">
+            <input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric">
+            <span class="ex-stat-label">kg</span>
+            <input type="number" class="ex-stat" data-field="sets" value="${data.sets}" min="0" inputmode="numeric">
+            <span class="ex-stat-label">×</span>
+            <input type="number" class="ex-stat" data-field="reps" value="${data.reps}" min="0" inputmode="numeric">
+          </span>
+        </div>
+        <div class="ex-chart-content" style="display:none;margin-top:12px;width:100%;"></div>
       </div>`;
       exIdx++;
     });
@@ -467,6 +518,26 @@ function showFitness() {
         currentStrengthMetric = key;
         const sb = fitnessScreen.querySelector('.strength-board');
         if (sb) { const h = strengthChartSVG(getStrengthData(14)); if (h) sb.outerHTML = h; }
+        fitnessScreen.querySelectorAll('.ex-chart-content').forEach(el => {
+          if (el.style.display !== 'none' && el.hasChildNodes()) {
+            const exName = el.closest('[data-exercise]')?.dataset.exercise;
+            if (exName) el.innerHTML = miniChartSVG(getExerciseData(exName, 14));
+          }
+        });
+      }
+      return;
+    }
+    const toggleBtn = e.target.closest('.ex-chart-toggle');
+    if (toggleBtn) {
+      const item = toggleBtn.closest('[data-exercise]');
+      if (!item) return;
+      const content = item.querySelector('.ex-chart-content');
+      if (!content) return;
+      if (content.style.display !== 'none') { content.style.display = 'none'; return; }
+      content.style.display = 'block';
+      if (!content.hasChildNodes()) {
+        const exData = getExerciseData(item.dataset.exercise, 14);
+        content.innerHTML = miniChartSVG(exData);
       }
       return;
     }
