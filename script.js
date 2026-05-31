@@ -4,7 +4,84 @@ const API = {
 };
 
 let savedData = {};
+let isLoading = true;
 
+const loadingOverlay = document.querySelector('.loading-overlay');
+const container = document.querySelector('.categories-container');
+const catScreen = document.querySelector('.category-screen');
+const fitnessScreen = document.querySelector('.fitness-screen');
+
+// ===== RIPPLE EFFECT =====
+function createRipple(e) {
+  const el = e.currentTarget;
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const x = (e.clientX ?? e.touches?.[0]?.clientX ?? rect.left + rect.width / 2) - rect.left - size / 2;
+  const y = (e.clientY ?? e.touches?.[0]?.clientY ?? rect.top + rect.height / 2) - rect.top - size / 2;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+  el.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+}
+
+document.querySelectorAll('.tab-bar button').forEach(el => {
+  el.addEventListener('click', createRipple);
+});
+
+// ===== PAGE TRANSITIONS =====
+let transitionActive = false;
+
+function transitionTo(hideScreen, showScreen, direction) {
+  if (transitionActive) return;
+  if (!showScreen || showScreen.style.display !== 'none') return;
+  transitionActive = true;
+
+  hideScreen.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+  hideScreen.style.transform = direction === 'left' ? 'translateX(-30px)' : 'translateX(30px)';
+  hideScreen.style.opacity = '0';
+
+  setTimeout(() => {
+    hideScreen.style.display = 'none';
+    hideScreen.style.transform = '';
+    hideScreen.style.opacity = '';
+
+    showScreen.style.display = 'block';
+    showScreen.style.transform = direction === 'left' ? 'translateX(30px)' : 'translateX(-30px)';
+    showScreen.style.opacity = '0';
+
+    requestAnimationFrame(() => {
+      showScreen.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease';
+      showScreen.style.transform = 'translateX(0)';
+      showScreen.style.opacity = '1';
+
+      setTimeout(() => {
+        showScreen.style.transform = '';
+        showScreen.style.opacity = '';
+        showScreen.style.transition = '';
+        transitionActive = false;
+      }, 400);
+    });
+  }, 300);
+}
+
+// ===== SCROLL FADE =====
+const scrollObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+function observeScrollElements(parent) {
+  parent.querySelectorAll('.scroll-fade:not(.observed)').forEach(el => {
+    el.classList.add('observed');
+    scrollObserver.observe(el);
+  });
+}
+
+// ===== CATEGORIES =====
 const categories = [
   { name: 'Math', icon: '<text x="12" y="18" font-family="serif" font-size="22" font-weight="bold" fill="none" stroke="currentColor" stroke-width="1.5" text-anchor="middle">&#x03C0;</text>' },
   { name: 'Science', icon: '<ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" stroke-width="1.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" fill="none" stroke="currentColor" stroke-width="1.5" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="2" fill="currentColor"/>' },
@@ -18,22 +95,27 @@ const categories = [
   { name: 'Chemistry', icon: '<path d="M9 4 H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 4 V14" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 14 C7 11 17 11 17 14 L15 19 C15 21 9 21 9 19 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="16" r="1" fill="currentColor"/><circle cx="14" cy="16" r="1" fill="currentColor"/>' }
 ];
 
-const container = document.querySelector('.categories-container');
-const catScreen = document.querySelector('.category-screen');
-
 const welcome = document.createElement('div');
 welcome.className = 'welcome-text';
-welcome.style.cssText = 'grid-column:1/-1;text-align:center;font-size:36px;color:#fff;font-weight:600;padding-bottom:10px;';
 welcome.textContent = 'What do you want to learn?';
 container.appendChild(welcome);
+
+let activeScreen = null;
+let categoriesFragment = null;
 
 categories.forEach(cat => {
   const div = document.createElement('div');
   div.className = 'category-item';
   div.innerHTML = `<svg class="category-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">${cat.icon}</svg><span>${cat.name}</span>`;
-  div.addEventListener('click', () => {
+  div.addEventListener('click', (e) => {
+    createRipple(e);
     document.querySelectorAll('.category-item').forEach(el => {
-      if (el !== div) { el.getAnimations().forEach(a => a.cancel()); el.style.animation = ''; el.classList.add('hiding'); el.style.opacity = '0'; el.style.transform = 'scale(0.8)'; }
+      if (el !== div) {
+        el.getAnimations().forEach(a => a.cancel());
+        el.style.animation = '';
+        el.classList.add('hiding');
+        el.style.cssText += 'opacity:0;transform:scale(0.8);';
+      }
     });
     const rect = div.getBoundingClientRect();
     const cx = window.innerWidth / 2 - rect.width / 2;
@@ -44,12 +126,16 @@ categories.forEach(cat => {
       { transform: 'none', opacity: 1 },
       { transform: `translate(${dx}px, ${dy}px) scale(1.35)`, opacity: 0 }
     ], { duration: 700, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+
     setTimeout(() => {
       container.classList.remove('visible');
+      container.style.display = 'none';
+
       const key = 'cat_' + cat.name.toLowerCase();
       const val = savedData[key] ?? Math.floor(Math.random() * 100);
       savedData[key] = val;
       API.post(savedData);
+
       const angle = -90 + val * 1.8;
       const r = 100, cx = 140, cy = 140;
       const p = (deg) => `${cx + r * Math.cos(deg * Math.PI / 180)},${cy + r * Math.sin(deg * Math.PI / 180)}`;
@@ -74,39 +160,42 @@ categories.forEach(cat => {
             <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#cg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="${314.16 * (1 - val / 100)}"/>
               <linearGradient id="cg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
               ${ticks}
-        <g class="needle" style="transform: rotate(-90deg); transform-origin: 140px 140px;">
+              <g class="needle spring" style="transform: rotate(-90deg); transform-origin: 140px 140px;">
                 <polygon points="${cx},${cy} ${cx - 4},${cy - 60} ${cx},${cy - 75} ${cx + 4},${cy - 60}" fill="#ffffff"/>
                 <circle cx="${cx}" cy="${cy}" r="5" fill="#ffffff"/>
               </g>
-              <text x="${cx}" y="${cy + 65}" class="value-text" fill="${val < 50 ? '#ef4444' : val > 50 ? '#22c55e' : '#f59e0b'}" font-size="28">${val}</text>
+              <text x="${cx}" y="${cy + 65}" class="value-text pulse" fill="${val < 50 ? '#ef4444' : val > 50 ? '#22c55e' : '#f59e0b'}" font-size="28">${val}</text>
             </svg>
           </div>
           <div class="spacer"></div>
         </div>`;
+      catScreen.style.display = 'block';
       catScreen.classList.add('visible');
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           const needle = catScreen.querySelector('.needle');
+          const valText = catScreen.querySelector('.value-text');
           if (needle) needle.style.transform = `rotate(${angle}deg)`;
+          if (valText) { valText.classList.remove('pulse'); void valText.offsetWidth; valText.classList.add('pulse'); }
         });
       });
+
       const onScroll = () => {
         const topRow = catScreen.querySelector('.top-row');
         if (!topRow) return;
         const scrollY = catScreen.scrollTop;
-        const progress = Math.min(scrollY / 150, 1);
-        topRow.style.opacity = 1 - progress * 0.5;
-        topRow.style.transform = `scale(${1 - progress * 0.08}) translateY(${progress * -8}px)`;
+        topRow.classList.toggle('scrolled', scrollY > 20);
       };
-      if (catScreen._scrollHandler) catScreen.removeEventListener('scroll', catScreen._scrollHandler);
-      catScreen._scrollHandler = onScroll;
-      catScreen.addEventListener('scroll', catScreen._scrollHandler);
+      catScreen.addEventListener('scroll', onScroll);
+
       catScreen.querySelector('.back-btn').addEventListener('click', () => {
-        catScreen.removeEventListener('scroll', catScreen._scrollHandler);
-        catScreen._scrollHandler = null;
+        catScreen.removeEventListener('scroll', onScroll);
         const tr = catScreen.querySelector('.top-row');
-        if (tr) { tr.style.opacity = ''; tr.style.transform = ''; }
+        if (tr) tr.classList.remove('scrolled');
         catScreen.classList.remove('visible');
+        catScreen.style.display = 'none';
+        container.style.display = '';
         container.classList.add('visible');
         document.querySelectorAll('.category-item').forEach(el => {
           el.getAnimations().forEach(anim => anim.cancel());
@@ -121,10 +210,9 @@ categories.forEach(cat => {
   container.appendChild(div);
 });
 
-const fitnessScreen = document.querySelector('.fitness-screen');
+// ===== FITNESS =====
 let fitnessVal = 42;
 
-API.get().then(d => { savedData = d; if (d.fitnessVal !== undefined) fitnessVal = d.fitnessVal; });
 const workoutMap = {1:'Chest,Bicep',5:'Chest,Bicep',2:'Shoulder,Abs',6:'Shoulder,Abs',3:'Tricep,Back',0:'Tricep,Back',4:'Run'};
 const exercises = {
   Chest:['Incline Dumbbell Press','Flat Bench Press','Dumbbell Flies','Pullover'],
@@ -156,7 +244,7 @@ function buildGaugeSVG(val) {
         <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#fg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="${314.16 * (1 - val / 100)}"/>
         <linearGradient id="fg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
         ${ticks}
-        <g class="needle" style="transform: rotate(-90deg); transform-origin: ${cx}px ${cy}px;">
+        <g class="needle spring" style="transform: rotate(-90deg); transform-origin: ${cx}px ${cy}px;">
           <polygon points="${cx},${cy} ${cx - 4},${cy - 60} ${cx},${cy - 75} ${cx + 4},${cy - 60}" fill="#ffffff"/>
           <circle cx="${cx}" cy="${cy}" r="5" fill="#ffffff"/>
         </g>
@@ -213,7 +301,9 @@ function buildGaugeSVG(val) {
 
 function showFitness() {
   fitnessScreen.innerHTML = buildGaugeSVG(fitnessVal);
+  fitnessScreen.style.display = 'block';
   fitnessScreen.classList.add('visible');
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       const needle = fitnessScreen.querySelector('.needle');
@@ -224,17 +314,43 @@ function showFitness() {
   API.post(savedData);
 }
 
+// ===== TABS =====
 document.querySelectorAll('.tab-bar button').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+
     const isLearning = btn.classList.contains('learning-btn');
     const isFitness = btn.classList.contains('fitness-btn');
-    if (catScreen._scrollHandler) { catScreen.removeEventListener('scroll', catScreen._scrollHandler); catScreen._scrollHandler = null; }
-    fitnessScreen.classList.remove('visible');
+    const isHome = btn.classList.contains('home-btn');
+    const isMind = btn.classList.contains('mind-btn');
+    const isFinance = btn.classList.contains('finance-btn');
+    const isHabits = btn.classList.contains('habits-btn');
+    const isNutrition = btn.classList.contains('nutrition-btn');
+
+    // hide all screens
     catScreen.classList.remove('visible');
-    container.classList.toggle('visible', isLearning);
-    if (isLearning) {
+    catScreen.style.display = 'none';
+    fitnessScreen.classList.remove('visible');
+    fitnessScreen.style.display = 'none';
+
+    // remove placeholder message if exists
+    const placeholder = container.querySelector('.placeholder-msg');
+    if (placeholder) placeholder.remove();
+
+    // restore categories if stashed
+    if (categoriesFragment && container.querySelectorAll('.category-item').length === 0) {
+      container.innerHTML = '';
+      container.appendChild(categoriesFragment);
+      categoriesFragment = null;
+    }
+
+    container.classList.remove('visible');
+    container.style.display = 'none';
+
+    if (isLearning || isHome) {
+      container.style.display = '';
+      container.classList.add('visible');
       document.querySelectorAll('.category-item, .welcome-text').forEach(el => {
         el.getAnimations().forEach(anim => anim.cancel());
         el.style.animation = '';
@@ -248,10 +364,38 @@ document.querySelectorAll('.tab-bar button').forEach(btn => {
         });
       });
     }
-    if (isFitness) {
-      showFitness();
+
+    if (isFitness) showFitness();
+
+    // placeholder for other tabs
+    if (isMind || isFinance || isHabits || isNutrition) {
+      const cats = container.querySelectorAll('.category-item, .welcome-text');
+      if (cats.length > 0) {
+        const frag = document.createDocumentFragment();
+        cats.forEach(el => frag.appendChild(el));
+        categoriesFragment = frag;
+      }
+      container.innerHTML = '';
+      container.style.display = '';
+      container.classList.add('visible');
+      const msg = document.createElement('div');
+      msg.className = 'placeholder-msg welcome-text';
+      msg.style.cssText = 'grid-column:1/-1;text-align:center;font-size:28px;color:rgba(255,255,255,0.5);padding:60px 0;';
+      msg.textContent = `${isMind ? 'Mind' : isFinance ? 'Finance' : isHabits ? 'Habits' : 'Nutrition'} — coming soon`;
+      container.appendChild(msg);
     }
   });
 });
 
-document.querySelector('.home-btn').click();
+// ===== LOAD DATA =====
+API.get().then(d => {
+  savedData = d;
+  if (d.fitnessVal !== undefined) fitnessVal = d.fitnessVal;
+  isLoading = false;
+
+  loadingOverlay.classList.add('hidden');
+  setTimeout(() => { loadingOverlay.style.display = 'none'; }, 600);
+
+  // show home by default (already clicked in html)
+  document.querySelector('.home-btn').click();
+});
