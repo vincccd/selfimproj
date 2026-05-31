@@ -233,6 +233,7 @@ function gaugeSVG(val, id) {
 let fitnessVal = 42;
 let currentStrengthMetric = 'volume';
 let selectedExercise = '';
+const APP_VERSION = '1.0.0';
 const strengthMetrics = [
   { key: 'volume', label: 'Volume', color: '#8b5cf6' },
   { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
@@ -351,7 +352,8 @@ function strengthChartSVG(data) {
     btns += `<button class="metric-btn${active ? ' active' : ''}" data-metric="${sm.key}" style="background:${active ? sm.color + '33' : 'rgba(255,255,255,0.04)'};border:1px solid ${active ? sm.color + '66' : 'rgba(255,255,255,0.08)'};color:${active ? sm.color : 'rgba(255,255,255,0.4)'};padding:4px 10px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;transition:all 0.2s ease;text-transform:uppercase;letter-spacing:0.3px;">${sm.label}</button>`;
   });
   const allExs = getAllTrackedExercises();
-  let opts = '<option value="">All Exercises</option>';
+  if (!selectedExercise && allExs.length > 0) selectedExercise = allExs[0];
+  let opts = '';
   allExs.forEach(ex => opts += `<option value="${ex}"${ex === selectedExercise ? ' selected' : ''}>${ex}</option>`);
   return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:16px;box-sizing:border-box;">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
@@ -596,7 +598,7 @@ function showDashboard() {
     <div class="dashboard-header">
       <div class="dashboard-greeting">${greeting}</div>
       <div class="dashboard-title">selfimproj</div>
-      <div class="dashboard-sub">Keep building yourself</div>
+      <div class="dashboard-sub">Keep building yourself <span style="font-size:10px;color:rgba(255,255,255,0.2);margin-left:6px">v${APP_VERSION}</span></div>
     </div>
     <div class="dashboard-cards">
       <div class="dashboard-card">
