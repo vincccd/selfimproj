@@ -506,8 +506,7 @@ body { position: relative; }
     border-color: rgba(255,255,255,0.3);
 }
 
-.ex-select {
-    margin-left: auto;
+.ex-select, .period-select {
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
@@ -527,17 +526,20 @@ body { position: relative; }
     color-scheme: dark;
 }
 
-.ex-select option {
+.ex-select { margin-left: auto; }
+.period-select { margin-left: 4px; }
+
+.ex-select option, .period-select option {
     color: #fff;
     background: rgba(30,30,40,0.98);
 }
 
-.ex-select:hover {
+.ex-select:hover, .period-select:hover {
     background-color: rgba(255,255,255,0.1);
     border-color: rgba(255,255,255,0.2);
 }
 
-.ex-select:focus {
+.ex-select:focus, .period-select:focus {
     border-color: rgba(139,92,246,0.5);
     background-color: rgba(255,255,255,0.08);
 }

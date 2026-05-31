@@ -233,7 +233,17 @@ function gaugeSVG(val, id) {
 let fitnessVal = 42;
 let currentStrengthMetric = 'volume';
 let selectedExercise = '';
-const APP_VERSION = '1.0.22';
+let selectedPeriod = '14';
+const periodOptions = [
+  { value:'3', label:'3d' },
+  { value:'7', label:'7d' },
+  { value:'14', label:'14d' },
+  { value:'30', label:'30d' },
+  { value:'180', label:'6m' },
+  { value:'365', label:'1y' },
+  { value:'all', label:'All' }
+];
+const APP_VERSION = '1.0.24';
 const strengthMetrics = [
   { key: 'volume', label: 'Volume', color: '#8b5cf6' },
   { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
@@ -312,8 +322,22 @@ function getAllTrackedExercises() {
   return Array.from(set).sort();
 }
 
-function strengthChartSVG(data) {
-  const chartData = selectedExercise ? getExerciseData(selectedExercise, 14) : data;
+function getPeriodDays() {
+  if (selectedPeriod === 'all') {
+    const log = savedData.fitnessLog || {};
+    const dates = Object.keys(log).sort();
+    if (dates.length === 0) return 14;
+    const first = new Date(dates[0]);
+    const now = new Date();
+    return Math.max(2, Math.ceil((now - first) / (1000 * 60 * 60 * 24)) + 1);
+  }
+  return parseInt(selectedPeriod) || 14;
+}
+
+function strengthChartSVG() {
+  const days = getPeriodDays();
+  const data = getStrengthData(days);
+  const chartData = selectedExercise ? getExerciseData(selectedExercise, days) : data;
   if (chartData.length < 2) return '';
   const metric = currentStrengthMetric;
   const m = strengthMetrics.find(mm => mm.key === metric) || strengthMetrics[0];
@@ -356,9 +380,12 @@ function strengthChartSVG(data) {
   if (!selectedExercise && allExs.length > 0) selectedExercise = allExs[0];
   let opts = '';
   allExs.forEach(ex => opts += `<option value="${ex}"${ex === selectedExercise ? ' selected' : ''}>${ex}</option>`);
+  let periodOpts = '';
+  periodOptions.forEach(p => periodOpts += `<option value="${p.value}"${p.value === selectedPeriod ? ' selected' : ''}>${p.label}</option>`);
   return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:16px;box-sizing:border-box;">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
       <div style="display:flex;gap:4px;flex-wrap:wrap;">${btns}</div>
+      <select class="period-select">${periodOpts}</select>
       <select class="ex-select">${opts}</select>
     </div>
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
@@ -441,7 +468,7 @@ function buildGaugeSVG(val, todayLog) {
         </div>
       </div>
     </div>
-    ${strengthChartSVG(getStrengthData(14))}
+    ${strengthChartSVG()}
     <div style="height:80px;"></div>
   </div>`;
 }
@@ -482,11 +509,10 @@ function updateFitnessUI(exName) {
   }
   const sb = fitnessScreen.querySelector('.strength-board');
   if (sb) {
-    const h = strengthChartSVG(getStrengthData(14));
+    const h = strengthChartSVG();
     if (h) sb.outerHTML = h;
   }
 }
-
 function showFitness() {
   const todayStr = new Date().toISOString().slice(0,10);
   const todayLog = (savedData.fitnessLog || {})[todayStr] || {};
@@ -502,7 +528,7 @@ function showFitness() {
       if (key && key !== currentStrengthMetric) {
         currentStrengthMetric = key;
         const sb = fitnessScreen.querySelector('.strength-board');
-        if (sb) { const h = strengthChartSVG(getStrengthData(14)); if (h) sb.outerHTML = h; }
+        if (sb) { const h = strengthChartSVG(); if (h) sb.outerHTML = h; }
       }
       return;
     }
@@ -544,7 +570,7 @@ function showFitness() {
     API.post(savedData);
     const sb = fitnessScreen.querySelector('.strength-board');
     if (sb) {
-      const h = strengthChartSVG(getStrengthData(14));
+      const h = strengthChartSVG();
       if (h) sb.outerHTML = h;
     }
   };
@@ -552,11 +578,19 @@ function showFitness() {
 
   if (fitnessScreen._selHandler) fitnessScreen.removeEventListener('change', fitnessScreen._selHandler);
   fitnessScreen._selHandler = (e) => {
-    const select = e.target.closest('.ex-select');
-    if (!select) return;
-    selectedExercise = select.value || '';
-    const sb = fitnessScreen.querySelector('.strength-board');
-    if (sb) { const h = strengthChartSVG(getStrengthData(14)); if (h) sb.outerHTML = h; }
+    const exSel = e.target.closest('.ex-select');
+    if (exSel) {
+      selectedExercise = exSel.value || '';
+      const sb = fitnessScreen.querySelector('.strength-board');
+      if (sb) { const h = strengthChartSVG(); if (h) sb.outerHTML = h; }
+      return;
+    }
+    const periodSel = e.target.closest('.period-select');
+    if (periodSel) {
+      selectedPeriod = periodSel.value;
+      const sb = fitnessScreen.querySelector('.strength-board');
+      if (sb) { const h = strengthChartSVG(); if (h) sb.outerHTML = h; }
+    }
   };
   fitnessScreen.addEventListener('change', fitnessScreen._selHandler);
 
