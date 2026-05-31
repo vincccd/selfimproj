@@ -233,7 +233,7 @@ function gaugeSVG(val, id) {
 let fitnessVal = 42;
 let currentStrengthMetric = 'volume';
 let selectedExercise = '';
-const APP_VERSION = '1.0.21';
+const APP_VERSION = '1.0.22';
 const strengthMetrics = [
   { key: 'volume', label: 'Volume', color: '#8b5cf6' },
   { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
@@ -388,7 +388,7 @@ function buildGaugeSVG(val, todayLog) {
         <span class="ex-check">${data.done ? '✓' : '○'}</span>
         <span class="ex-name hover-pop">${ex}</span>
         <span class="ex-stats">
-          ${bw ? '' : `<input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric"> `}
+          ${bw ? '' : `<input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric"><span class="ex-stat-label">kg</span> `}
           <input type="number" class="ex-stat" data-field="sets" value="${data.sets}" min="0" inputmode="numeric">
           <span class="ex-stat-label">×</span>
           <input type="number" class="ex-stat" data-field="reps" value="${data.reps}" min="0" inputmode="numeric">
