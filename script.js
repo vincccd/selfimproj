@@ -259,11 +259,19 @@ function buildGaugeSVG(val, todayLog) {
   let doneCount = 0;
   muscles.forEach(m => {
     (exercises[m] || []).forEach(ex => {
-      const done = todayLog[ex] || false;
-      if (done) doneCount++;
-      exList += `<div class="exercise-item${done ? ' completed' : ''}" data-exercise="${ex}" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:32px;color:rgba(255,255,255,0.8);animation-delay:${exIdx * 0.08}s;">
-        <span class="ex-check">${done ? '✓' : '○'}</span>
-        <span class="hover-pop">${ex}</span>
+      const entry = todayLog[ex];
+      const data = entry && typeof entry === 'object' ? entry : { done: !!entry, weight: 0, sets: 0, reps: 0 };
+      if (data.done) doneCount++;
+      exList += `<div class="exercise-item${data.done ? ' completed' : ''}" data-exercise="${ex}" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:32px;color:rgba(255,255,255,0.8);animation-delay:${exIdx * 0.08}s;">
+        <span class="ex-check">${data.done ? '✓' : '○'}</span>
+        <span class="ex-name hover-pop">${ex}</span>
+        <span class="ex-stats">
+          <input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric">
+          <span class="ex-stat-label">kg</span>
+          <input type="number" class="ex-stat" data-field="sets" value="${data.sets}" min="0" inputmode="numeric">
+          <span class="ex-stat-label">×</span>
+          <input type="number" class="ex-stat" data-field="reps" value="${data.reps}" min="0" inputmode="numeric">
+        </span>
       </div>`;
       exIdx++;
     });
@@ -317,15 +325,17 @@ function buildGaugeSVG(val, todayLog) {
 }
 
 function updateFitnessUI(exName) {
+  const todayStr = new Date().toISOString().slice(0,10);
+  const log = (savedData.fitnessLog || {})[todayStr] || {};
   const item = exName ? fitnessScreen.querySelector(`[data-exercise="${exName}"]`) : null;
   if (item) {
-    const done = item.classList.toggle('completed');
+    const entry = log[exName];
+    const done = entry && (typeof entry === 'object' ? entry.done : !!entry);
+    item.classList.toggle('completed', !!done);
     item.querySelector('.ex-check').textContent = done ? '✓' : '○';
   }
   const allExs = getTodayExercises();
-  const todayStr = new Date().toISOString().slice(0,10);
-  const log = (savedData.fitnessLog || {})[todayStr] || {};
-  const done = allExs.filter(ex => log[ex]).length;
+  const done = allExs.filter(ex => { const e = log[ex]; return e && (typeof e === 'object' ? e.done : !!e); }).length;
   const total = allExs.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const progressText = fitnessScreen.querySelector('.fitness-progress-text');
@@ -359,21 +369,44 @@ function showFitness() {
 
   if (fitnessScreen._exHandler) fitnessScreen.removeEventListener('click', fitnessScreen._exHandler);
   fitnessScreen._exHandler = (e) => {
+    if (e.target.classList.contains('ex-stat') || e.target.closest('.ex-stats')) return;
     const item = e.target.closest('[data-exercise]');
     if (!item) return;
     const exName = item.dataset.exercise;
     if (!savedData.fitnessLog) savedData.fitnessLog = {};
     if (!savedData.fitnessLog[todayStr]) savedData.fitnessLog[todayStr] = {};
-    savedData.fitnessLog[todayStr][exName] = !savedData.fitnessLog[todayStr][exName];
+    const cur = savedData.fitnessLog[todayStr][exName];
+    const entry = cur && typeof cur === 'object' ? cur : { done: !!cur, weight: 0, sets: 0, reps: 0 };
+    entry.done = !entry.done;
+    savedData.fitnessLog[todayStr][exName] = entry;
     const allExs = getTodayExercises();
     const log = savedData.fitnessLog[todayStr];
-    const done = allExs.filter(ex => log[ex]).length;
-    fitnessVal = allExs.length > 0 ? Math.round((done / allExs.length) * 100) : fitnessVal;
+    const doneCount = allExs.filter(ex => { const e = log[ex]; return e && (typeof e === 'object' ? e.done : !!e); }).length;
+    fitnessVal = allExs.length > 0 ? Math.round((doneCount / allExs.length) * 100) : fitnessVal;
     savedData.fitnessVal = fitnessVal;
     API.post(savedData);
     updateFitnessUI(exName);
   };
   fitnessScreen.addEventListener('click', fitnessScreen._exHandler);
+
+  if (fitnessScreen._inHandler) fitnessScreen.removeEventListener('input', fitnessScreen._inHandler);
+  fitnessScreen._inHandler = (e) => {
+    const input = e.target;
+    if (!input.classList.contains('ex-stat')) return;
+    const item = input.closest('[data-exercise]');
+    if (!item) return;
+    const exName = item.dataset.exercise;
+    const field = input.dataset.field;
+    const val = parseFloat(input.value) || 0;
+    if (!savedData.fitnessLog) savedData.fitnessLog = {};
+    if (!savedData.fitnessLog[todayStr]) savedData.fitnessLog[todayStr] = {};
+    const cur = savedData.fitnessLog[todayStr][exName];
+    const entry = cur && typeof cur === 'object' ? cur : { done: !!cur, weight: 0, sets: 0, reps: 0 };
+    entry[field] = val;
+    savedData.fitnessLog[todayStr][exName] = entry;
+    API.post(savedData);
+  };
+  fitnessScreen.addEventListener('input', fitnessScreen._inHandler);
 
   requestAnimationFrame(() => {
     const needle = fitnessScreen.querySelector('.needle');
@@ -547,7 +580,7 @@ API.get().then(d => {
   const todayLog = (d.fitnessLog || {})[todayStr] || {};
   const todayExs = getTodayExercises();
   if (todayExs.length > 0) {
-    const done = todayExs.filter(ex => todayLog[ex]).length;
+    const done = todayExs.filter(ex => { const e = todayLog[ex]; return e && (typeof e === 'object' ? e.done : !!e); }).length;
     fitnessVal = Math.round((done / todayExs.length) * 100);
     if (d.fitnessVal === undefined) d.fitnessVal = fitnessVal;
   }

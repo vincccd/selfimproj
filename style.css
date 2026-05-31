@@ -476,6 +476,58 @@ body { position: relative; }
     to { opacity: 1; transform: translateX(0); }
 }
 
+.ex-stats {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ex-stat {
+    width: 48px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 6px 4px;
+    font-size: 18px;
+    color: rgba(255,255,255,0.9);
+    text-align: center;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease;
+    -moz-appearance: textfield;
+}
+
+.ex-stat::-webkit-inner-spin-button,
+.ex-stat::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.ex-stat:focus {
+    border-color: rgba(255,255,255,0.3);
+}
+
+.exercise-item.completed .ex-stat {
+    opacity: 0.5;
+}
+
+.ex-stat-label {
+    font-size: 16px;
+    color: rgba(255,255,255,0.25);
+    margin-right: 6px;
+}
+
+.ex-stat-label:last-child {
+    margin-right: 0;
+}
+
+.ex-name {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .hover-pop {
     transition: transform 0.2s ease;
     cursor: pointer;
