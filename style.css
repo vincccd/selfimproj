@@ -163,7 +163,6 @@ body { position: relative; }
 }
 
 /* ===== SCREENS BASE ===== */
-.categories-container,
 .category-screen,
 .fitness-screen {
     position: fixed;
@@ -177,10 +176,14 @@ body { position: relative; }
     -webkit-overflow-scrolling: touch;
 }
 
+.dashboard-screen {
+    z-index: 5;
+}
+
 /* ===== CATEGORIES GRID ===== */
 .categories-container {
-    padding: 32px;
-    align-content: center;
+    display: none;
+    z-index: 5;
 }
 
 .categories-container.visible {
@@ -726,6 +729,7 @@ body { position: relative; }
         gap: 12px;
         padding: 16px;
         max-width: 100%;
+        width: calc(100% - 32px);
     }
 
     .category-item {
@@ -748,14 +752,15 @@ body { position: relative; }
     .welcome-text { font-size: 28px; }
 
     .tab-bar button {
-        font-size: 10px;
-        padding: 6px 12px;
-        min-width: 48px;
+        font-size: 11px;
+        padding: 8px 10px;
+        min-width: 44px;
+        border-radius: 12px;
     }
 
-    .tab-bar button svg { width: 18px; height: 18px; }
-    .tab-bar button span { font-size: 8px; }
-    .tab-bar { gap: 6px; padding: 10px 12px; }
+    .tab-bar button svg { width: 20px; height: 20px; }
+    .tab-bar button span { font-size: 8px; display: block; }
+    .tab-bar { gap: 5px; padding: 10px 12px; justify-content: flex-start; }
 }
 
 @media (max-width: 480px) {
@@ -763,6 +768,7 @@ body { position: relative; }
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
         padding: 12px;
+        width: calc(100% - 24px);
     }
 
     .category-item {
@@ -782,32 +788,25 @@ body { position: relative; }
     .welcome-text { font-size: 22px; }
 
     .tab-bar button {
-        font-size: 9px;
-        padding: 5px 8px;
-        min-width: 42px;
+        font-size: 10px;
+        padding: 6px 8px;
+        min-width: 38px;
         border-radius: 10px;
         gap: 2px;
     }
 
-    .tab-bar button svg { width: 16px; height: 16px; }
+    .tab-bar button svg { width: 18px; height: 18px; }
     .tab-bar button span { font-size: 7px; }
-    .tab-bar { gap: 4px; padding: 8px 6px; }
+    .dashboard-screen { padding: 24px 16px 100px; }
+    .dashboard-title { font-size: 28px; }
+    .dashboard-cards { gap: 8px; margin-top: 20px; }
+    .dashboard-card { padding: 14px; }
+    .dashboard-card-value { font-size: 26px; }
+    .dashboard-cat-tag { font-size: 12px; padding: 6px 12px; }
+
+    .tab-bar { gap: 3px; padding: 8px 8px; }
 
     .fitness-screen .scroll-wrap > div:nth-of-type(2) {
         flex-direction: column !important;
     }
-}
-
-@media (max-width: 360px) {
-    .tab-bar button {
-        font-size: 8px;
-        padding: 4px 6px;
-        gap: 1px;
-        border-radius: 8px;
-        min-width: 36px;
-    }
-
-    .tab-bar button svg { width: 14px; height: 14px; }
-    .tab-bar button span { display: none; }
-    .tab-bar { gap: 3px; padding: 6px 4px; }
 }
