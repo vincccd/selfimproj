@@ -204,28 +204,22 @@ function gaugeSVG(val, id) {
               <text x="${tx}" y="${ty + 4}" fill="rgba(255,255,255,0.35)" font-family="'SF Mono',monospace" font-size="11" text-anchor="middle" font-weight="500">${v}</text>`;
   }
 
-  return `<svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+  return `<svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg" class="gauge-svg">
     <defs>
       <linearGradient id="g-${id}" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0%" stop-color="#ef4444"/>
         <stop offset="50%" stop-color="#f59e0b"/>
         <stop offset="100%" stop-color="#22c55e"/>
       </linearGradient>
-      <filter id="g-glow-${id}">
-        <feGaussianBlur stdDeviation="4" result="blur"/>
-        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
     </defs>
     <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>
-    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLength}" stroke-dashoffset="${offset}" opacity="0.3" filter="url(#g-glow-${id})"/>
-    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLength}" stroke-dashoffset="${offset}" filter="url(#g-glow-${id})"/>
+    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLength}" stroke-dashoffset="${offset}" class="gauge-arc"/>
     ${ticks}
     <circle cx="40" cy="140" r="4" fill="rgba(255,255,255,0.1)"/>
     <circle cx="240" cy="140" r="4" fill="${color}" opacity="0.4"/>
     <g class="needle spring" style="transform: rotate(-90deg); transform-origin: ${gcx}px ${gcy}px;">
       <polygon points="${gcx},${gcy} ${gcx - 3},${gcy - 55} ${gcx},${gcy - 70} ${gcx + 3},${gcy - 55}" fill="#ffffff"/>
       <circle cx="${gcx}" cy="${gcy}" r="5" fill="#ffffff"/>
-      <circle cx="${gcx}" cy="${gcy}" r="10" fill="rgba(255,255,255,0.08)"/>
     </g>
     <text x="${gcx}" y="${gcy + 60}" class="value-text" fill="${color}" font-size="30" font-weight="700" font-family="'SF Mono',monospace" letter-spacing="-0.5">${val}</text>
   </svg>`;

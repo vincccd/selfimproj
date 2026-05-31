@@ -355,19 +355,20 @@ body { position: relative; }
     height: min(560px, 90vw);
     position: relative;
     margin: 0 auto;
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.3));
 }
 
 .car-gauge svg {
     width: 100%;
     height: 100%;
     display: block;
-    overflow: visible;
+}
+
+.car-gauge .gauge-arc {
+    filter: drop-shadow(0 0 8px currentColor);
 }
 
 .car-gauge .needle {
     transform-origin: 50% 50%;
-    transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .car-gauge .needle.spring {
@@ -375,11 +376,7 @@ body { position: relative; }
 }
 
 .car-gauge .needle polygon {
-    filter: drop-shadow(0 0 6px rgba(255,255,255,0.3));
-}
-
-.car-gauge .needle circle:last-child {
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.15));
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.4));
 }
 
 .car-gauge .value-text {
@@ -388,8 +385,7 @@ body { position: relative; }
     text-anchor: middle;
     letter-spacing: -0.5px;
     transition: all 0.3s ease;
-    filter: drop-shadow(0 0 12px currentColor);
-    animation: valueBreath 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px currentColor);
 }
 
 .value-text.pulse {
@@ -400,11 +396,6 @@ body { position: relative; }
     0% { transform: scale(1); }
     50% { transform: scale(1.15); }
     100% { transform: scale(1); }
-}
-
-@keyframes valueBreath {
-    0%, 100% { opacity: 0.9; }
-    50% { opacity: 1; }
 }
 
 /* ===== FITNESS SCREEN ===== */
