@@ -232,6 +232,7 @@ function gaugeSVG(val, id) {
 // ===== FITNESS =====
 let fitnessVal = 42;
 let currentStrengthMetric = 'volume';
+let selectedExercise = '';
 const strengthMetrics = [
   { key: 'volume', label: 'Volume', color: '#8b5cf6' },
   { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
@@ -284,11 +285,37 @@ function getStrengthData(days) {
   return data;
 }
 
+function getExerciseData(exName, days) {
+  const data = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0,10);
+    const entry = (savedData.fitnessLog || {})[dateStr]?.[exName];
+    if (entry && typeof entry === 'object') {
+      const w = entry.weight || 0, s = entry.sets || 0, r = entry.reps || 0;
+      data.push({ date: dateStr, volume: w * s * r, tonnage: w * r, maxWeight: w, max1RM: w > 0 && r > 0 ? Math.round(w * (1 + r / 30)) : 0, exercisesDone: entry.done ? 1 : 0, label: `${d.getMonth()+1}/${d.getDate()}` });
+    } else {
+      data.push({ date: dateStr, volume: 0, tonnage: 0, maxWeight: 0, max1RM: 0, exercisesDone: 0, label: `${d.getMonth()+1}/${d.getDate()}` });
+    }
+  }
+  return data;
+}
+
+function getAllTrackedExercises() {
+  const set = new Set();
+  const log = savedData.fitnessLog || {};
+  Object.values(log).forEach(day => Object.keys(day).forEach(ex => set.add(ex)));
+  return Array.from(set).sort();
+}
+
 function strengthChartSVG(data) {
-  if (data.length < 2) return '';
+  const chartData = selectedExercise ? getExerciseData(selectedExercise, 14) : data;
+  if (chartData.length < 2) return '';
   const metric = currentStrengthMetric;
   const m = strengthMetrics.find(mm => mm.key === metric) || strengthMetrics[0];
-  const values = data.map(d => d[metric] ?? 0);
+  const values = chartData.map(d => d[metric] ?? 0);
   const maxV = Math.max(...values, 1);
   const W = 600, H = 200, PL = 44, PR = 16, PT = 16, PB = 36;
   const cw = W - PL - PR, ch = H - PT - PB;
@@ -299,23 +326,23 @@ function strengthChartSVG(data) {
     const v = Math.round(maxV * i / yTicks);
     extras += `<line x1="${PL}" y1="${y}" x2="${W - PR}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/><text x="${PL - 8}" y="${y + 4}" fill="rgba(255,255,255,0.25)" font-family="'SF Mono',monospace" font-size="10" text-anchor="end">${v}</text>`;
   }
-  const points = data.map((d, i) => {
-    const x = PL + cw * i / (data.length - 1);
+  const points = chartData.map((d, i) => {
+    const x = PL + cw * i / (chartData.length - 1);
     const y = PT + ch - ch * (d[metric] ?? 0) / maxV;
     return { x, y };
   });
   let linePath = `M ${points[0].x} ${points[0].y}`;
   for (let i = 1; i < points.length; i++) linePath += ` L ${points[i].x} ${points[i].y}`;
   const areaPath = linePath + ` L ${points[points.length - 1].x} ${PT + ch} L ${points[0].x} ${PT + ch} Z`;
-  const step = Math.max(1, Math.floor(data.length / 7));
+  const step = Math.max(1, Math.floor(chartData.length / 7));
   let labels = '';
-  data.forEach((d, i) => {
-    if (i % step !== 0 && i !== data.length - 1) return;
+  chartData.forEach((d, i) => {
+    if (i % step !== 0 && i !== chartData.length - 1) return;
     labels += `<text x="${points[i].x}" y="${H - PB + 16}" fill="rgba(255,255,255,0.25)" font-family="'SF Mono',monospace" font-size="10" text-anchor="middle">${d.label}</text>`;
   });
   let dots = '';
   points.forEach((p, i) => {
-    if ((data[i][metric] ?? 0) === 0) return;
+    if ((chartData[i][metric] ?? 0) === 0) return;
     dots += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="${m.color}" opacity="0.8"/>`;
   });
   let btns = '';
@@ -323,8 +350,14 @@ function strengthChartSVG(data) {
     const active = sm.key === metric;
     btns += `<button class="metric-btn${active ? ' active' : ''}" data-metric="${sm.key}" style="background:${active ? sm.color + '33' : 'rgba(255,255,255,0.04)'};border:1px solid ${active ? sm.color + '66' : 'rgba(255,255,255,0.08)'};color:${active ? sm.color : 'rgba(255,255,255,0.4)'};padding:4px 10px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;transition:all 0.2s ease;text-transform:uppercase;letter-spacing:0.3px;">${sm.label}</button>`;
   });
+  const allExs = getAllTrackedExercises();
+  let opts = '<option value="">All Exercises</option>';
+  allExs.forEach(ex => opts += `<option value="${ex}"${ex === selectedExercise ? ' selected' : ''}>${ex}</option>`);
   return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:16px;box-sizing:border-box;">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">${btns}</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">${btns}</div>
+      <select class="ex-select" style="margin-left:auto;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;font-size:12px;color:rgba(255,255,255,0.7);font-family:inherit;outline:none;cursor:pointer;">${opts}</select>
+    </div>
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
       ${extras}
       <defs><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${m.color}" stop-opacity="0.25"/><stop offset="100%" stop-color="${m.color}" stop-opacity="0.01"/></linearGradient></defs>
@@ -513,6 +546,16 @@ function showFitness() {
     }
   };
   fitnessScreen.addEventListener('input', fitnessScreen._inHandler);
+
+  if (fitnessScreen._selHandler) fitnessScreen.removeEventListener('change', fitnessScreen._selHandler);
+  fitnessScreen._selHandler = (e) => {
+    const select = e.target.closest('.ex-select');
+    if (!select) return;
+    selectedExercise = select.value || '';
+    const sb = fitnessScreen.querySelector('.strength-board');
+    if (sb) { const h = strengthChartSVG(getStrengthData(14)); if (h) sb.outerHTML = h; }
+  };
+  fitnessScreen.addEventListener('change', fitnessScreen._selHandler);
 
   requestAnimationFrame(() => {
     const needle = fitnessScreen.querySelector('.needle');
