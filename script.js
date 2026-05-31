@@ -242,7 +242,7 @@ const strengthMetrics = [
   { key: 'exercisesDone', label: 'Exercises', color: '#ef4444' },
 ];
 
-const bodyweightExercises = new Set(['Full Leg Raise','Hollow Hold','Dragon Planche','Leg Push','Knee Raise','Pull Up','Negative Muscle Up','Assisted High Pull Up','Assisted Front Lever','Horsekick','5K Run','Intervals','Hill Sprints','Cool Down']);
+const bodyweightExercises = new Set(['Full Leg Raise','Hollow Hold','Dragon Planche','Leg Push','Knee Raise','Pull Up','Negative Muscle Up','Assisted High Pull Up','Assisted Front Lever','5K Run','Intervals','Hill Sprints','Cool Down']);
 const workoutMap = {1:'Chest,Bicep',5:'Chest,Bicep',2:'Shoulder,Abs',6:'Shoulder,Abs',3:'Tricep,Back',0:'Tricep,Back',4:'Run'};
 const exercises = {
   Chest:['Incline Dumbbell Press','Flat Bench Press','Dumbbell Flies','Pullover'],
