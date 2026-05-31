@@ -356,7 +356,7 @@ function strengthChartSVG(data) {
   return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:16px;box-sizing:border-box;">
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
       <div style="display:flex;gap:4px;flex-wrap:wrap;">${btns}</div>
-      <select class="ex-select" style="margin-left:auto;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;font-size:12px;color:rgba(255,255,255,0.7);font-family:inherit;outline:none;cursor:pointer;">${opts}</select>
+      <select class="ex-select">${opts}</select>
     </div>
     <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
       ${extras}
