@@ -250,6 +250,69 @@ function getTodayExercises() {
   return list;
 }
 
+function getStrengthData(days) {
+  const data = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0,10);
+    const dayLog = (savedData.fitnessLog || {})[dateStr];
+    let volume = 0;
+    if (dayLog) {
+      Object.values(dayLog).forEach(entry => {
+        if (entry && typeof entry === 'object') volume += (entry.weight || 0) * (entry.sets || 0) * (entry.reps || 0);
+      });
+    }
+    data.push({ date: dateStr, volume, label: `${d.getMonth()+1}/${d.getDate()}` });
+  }
+  return data;
+}
+
+function strengthChartSVG(data) {
+  if (data.length < 2) return '';
+  const volumes = data.map(d => d.volume);
+  const maxV = Math.max(...volumes, 1);
+  const W = 600, H = 200, PL = 44, PR = 16, PT = 16, PB = 32;
+  const cw = W - PL - PR, ch = H - PT - PB;
+  const yTicks = 3;
+  let extras = '';
+  for (let i = 0; i <= yTicks; i++) {
+    const y = PT + ch - (ch * i / yTicks);
+    const v = Math.round(maxV * i / yTicks);
+    extras += `<line x1="${PL}" y1="${y}" x2="${W - PR}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/><text x="${PL - 8}" y="${y + 4}" fill="rgba(255,255,255,0.25)" font-family="'SF Mono',monospace" font-size="10" text-anchor="end">${v}</text>`;
+  }
+  const points = data.map((d, i) => {
+    const x = PL + cw * i / (data.length - 1);
+    const y = PT + ch - ch * d.volume / maxV;
+    return { x, y };
+  });
+  let linePath = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) linePath += ` L ${points[i].x} ${points[i].y}`;
+  const areaPath = linePath + ` L ${points[points.length - 1].x} ${PT + ch} L ${points[0].x} ${PT + ch} Z`;
+  const step = Math.max(1, Math.floor(data.length / 7));
+  let labels = '';
+  data.forEach((d, i) => {
+    if (i % step !== 0 && i !== data.length - 1) return;
+    labels += `<text x="${points[i].x}" y="${H - PB + 16}" fill="rgba(255,255,255,0.25)" font-family="'SF Mono',monospace" font-size="10" text-anchor="middle">${d.label}</text>`;
+  });
+  let dots = '';
+  points.forEach((p, i) => {
+    if (data[i].volume === 0) return;
+    dots += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#8b5cf6" opacity="0.8"/>`;
+  });
+  return `<div class="strength-board" style="margin-top:16px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px 16px 12px;box-sizing:border-box;">
+    <div style="font-size:22px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Strength</div>
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+      ${extras}
+      <defs><linearGradient id="sf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.25"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.01"/></linearGradient></defs>
+      <path d="${areaPath}" fill="url(#sf)"/>
+      <path d="${linePath}" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.4))"/>
+      ${dots}
+    </svg>
+  </div>`;
+}
+
 function buildGaugeSVG(val, todayLog) {
   const today = new Date().getDay();
   const workout = workoutMap[today];
@@ -320,6 +383,7 @@ function buildGaugeSVG(val, todayLog) {
         </div>
       </div>
     </div>
+    ${strengthChartSVG(getStrengthData(14))}
     <div style="height:80px;"></div>
   </div>`;
 }
@@ -357,6 +421,11 @@ function updateFitnessUI(exName) {
       { transform: `rotate(${-90 + (fitnessVal - 1) * 1.8}deg)` },
       { transform: `rotate(${-90 + fitnessVal * 1.8}deg)` }
     ], { duration: 800, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' });
+  }
+  const sb = fitnessScreen.querySelector('.strength-board');
+  if (sb) {
+    const h = strengthChartSVG(getStrengthData(14));
+    if (h) sb.outerHTML = h;
   }
 }
 
@@ -405,6 +474,11 @@ function showFitness() {
     entry[field] = val;
     savedData.fitnessLog[todayStr][exName] = entry;
     API.post(savedData);
+    const sb = fitnessScreen.querySelector('.strength-board');
+    if (sb) {
+      const h = strengthChartSVG(getStrengthData(14));
+      if (h) sb.outerHTML = h;
+    }
   };
   fitnessScreen.addEventListener('input', fitnessScreen._inHandler);
 
