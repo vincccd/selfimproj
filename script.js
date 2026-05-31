@@ -191,8 +191,8 @@ function gaugeSVG(val, id) {
   const angle = -90 + val * 1.8;
   const r = 100, gcx = 140, gcy = 140;
   const p = (deg) => `${gcx + r * Math.cos(deg * Math.PI / 180)},${gcy + r * Math.sin(deg * Math.PI / 180)}`;
-  const circumference = 2 * Math.PI * r;
-  const offset = circumference * (1 - val / 100);
+  const arcLength = Math.PI * r;
+  const offset = arcLength * (1 - val / 100);
   const color = val < 40 ? '#ef4444' : val < 70 ? '#f59e0b' : '#22c55e';
 
   let ticks = '';
@@ -217,8 +217,8 @@ function gaugeSVG(val, id) {
       </filter>
     </defs>
     <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>
-    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" opacity="0.3" filter="url(#g-glow-${id})"/>
-    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" filter="url(#g-glow-${id})"/>
+    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLength}" stroke-dashoffset="${offset}" opacity="0.3" filter="url(#g-glow-${id})"/>
+    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${arcLength}" stroke-dashoffset="${offset}" filter="url(#g-glow-${id})"/>
     ${ticks}
     <circle cx="40" cy="140" r="4" fill="rgba(255,255,255,0.1)"/>
     <circle cx="240" cy="140" r="4" fill="${color}" opacity="0.4"/>
