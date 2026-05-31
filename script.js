@@ -154,7 +154,7 @@ categories.forEach(cat => {
         requestAnimationFrame(() => {
           const needle = catScreen.querySelector('.needle');
           const valText = catScreen.querySelector('.value-text');
-          if (needle) needle.style.transform = `rotate(${angle}deg)`;
+          if (needle) needle.style.transform = `rotate(${-90 + val * 1.8}deg)`;
           if (valText) { valText.classList.remove('pulse'); void valText.offsetWidth; valText.classList.add('pulse'); }
         });
       });
