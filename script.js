@@ -233,7 +233,7 @@ function gaugeSVG(val, id) {
 let fitnessVal = 42;
 let currentStrengthMetric = 'volume';
 let selectedExercise = '';
-const APP_VERSION = '1.0.20';
+const APP_VERSION = '1.0.21';
 const strengthMetrics = [
   { key: 'volume', label: 'Volume', color: '#8b5cf6' },
   { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
@@ -242,6 +242,7 @@ const strengthMetrics = [
   { key: 'exercisesDone', label: 'Exercises', color: '#ef4444' },
 ];
 
+const bodyweightExercises = new Set(['Full Leg Raise','Hollow Hold','Dragon Planche','Leg Push','Knee Raise','Pull Up','Negative Muscle Up','Assisted High Pull Up','Assisted Front Lever','Horsekick','5K Run','Intervals','Hill Sprints','Cool Down']);
 const workoutMap = {1:'Chest,Bicep',5:'Chest,Bicep',2:'Shoulder,Abs',6:'Shoulder,Abs',3:'Tricep,Back',0:'Tricep,Back',4:'Run'};
 const exercises = {
   Chest:['Incline Dumbbell Press','Flat Bench Press','Dumbbell Flies','Pullover'],
@@ -382,11 +383,12 @@ function buildGaugeSVG(val, todayLog) {
       const entry = todayLog[ex];
       const data = entry && typeof entry === 'object' ? entry : { done: !!entry, weight: 0, sets: 0, reps: 0 };
       if (data.done) doneCount++;
+      const bw = bodyweightExercises.has(ex);
       exList += `<div class="exercise-item${data.done ? ' completed' : ''}" data-exercise="${ex}" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:32px;color:rgba(255,255,255,0.8);animation-delay:${exIdx * 0.08}s;">
         <span class="ex-check">${data.done ? '✓' : '○'}</span>
         <span class="ex-name hover-pop">${ex}</span>
         <span class="ex-stats">
-          <input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric">
+          ${bw ? '' : `<input type="number" class="ex-stat" data-field="weight" value="${data.weight}" min="0" inputmode="numeric"> `}
           <input type="number" class="ex-stat" data-field="sets" value="${data.sets}" min="0" inputmode="numeric">
           <span class="ex-stat-label">×</span>
           <input type="number" class="ex-stat" data-field="reps" value="${data.reps}" min="0" inputmode="numeric">
