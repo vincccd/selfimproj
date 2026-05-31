@@ -10,6 +10,7 @@ const loadingOverlay = document.querySelector('.loading-overlay');
 const container = document.querySelector('.categories-container');
 const catScreen = document.querySelector('.category-screen');
 const fitnessScreen = document.querySelector('.fitness-screen');
+const dashboardScreen = document.querySelector('.dashboard-screen');
 
 // ===== RIPPLE EFFECT =====
 function createRipple(e) {
@@ -314,6 +315,79 @@ function showFitness() {
   API.post(savedData);
 }
 
+// ===== DASHBOARD =====
+function showDashboard() {
+  const catKeys = Object.keys(savedData).filter(k => k.startsWith('cat_'));
+  const activeCats = catKeys.filter(k => (savedData[k] ?? 0) > 0);
+  const avgScore = catKeys.length > 0
+    ? Math.round(catKeys.reduce((s, k) => s + (savedData[k] ?? 0), 0) / catKeys.length)
+    : 0;
+  const streakDays = savedData.streakDays || [];
+  const streakCount = streakDays.length;
+
+  let catTags = '';
+  const catNames = { cat_math:'Math', cat_science:'Science', cat_engineering:'Engineering', cat_history:'History', cat_language:'Language', cat_ai:'AI', cat_biology:'Biology', cat_governance:'Governance', cat_coding:'Coding', cat_chemistry:'Chemistry' };
+  activeCats.forEach((k, i) => {
+    const name = catNames[k] || k.replace('cat_', '');
+    const score = savedData[k];
+    catTags += `<div class="dashboard-cat-tag" style="animation-delay:${i * 0.05}s">${name} <span style="color:rgba(255,255,255,0.3);margin-left:4px;font-size:12px">${score}%</span></div>`;
+  });
+
+  const hours = new Date().getHours();
+  const greeting = hours < 12 ? 'Good morning' : hours < 18 ? 'Good afternoon' : 'Good evening';
+
+  dashboardScreen.innerHTML = `
+    <div class="dashboard-header">
+      <div class="dashboard-greeting">${greeting}</div>
+      <div class="dashboard-title">selfimproj</div>
+      <div class="dashboard-sub">Keep building yourself</div>
+    </div>
+    <div class="dashboard-cards">
+      <div class="dashboard-card">
+        <div class="dashboard-card-label">Learning</div>
+        <div class="dashboard-card-value" style="color:${avgScore < 40 ? '#ef4444' : avgScore < 70 ? '#f59e0b' : '#22c55e'}">${avgScore}%</div>
+        <div class="dashboard-card-desc">${activeCats.length} of ${catKeys.length} categories active</div>
+        <div class="dashboard-mini-gauge">
+          <div class="dashboard-mini-gauge-fill" style="width:0%;background:linear-gradient(90deg,#8b5cf6,#3b82f6)"></div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-label">Fitness</div>
+        <div class="dashboard-card-value" style="color:${(savedData.fitnessVal ?? 0) < 40 ? '#ef4444' : (savedData.fitnessVal ?? 0) < 70 ? '#f59e0b' : '#22c55e'}">${savedData.fitnessVal ?? '—'}</div>
+        <div class="dashboard-card-desc">Overall fitness score</div>
+        <div class="dashboard-mini-gauge">
+          <div class="dashboard-mini-gauge-fill" style="width:0%;background:linear-gradient(90deg,#3b82f6,#22c55e)"></div>
+        </div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-label">Streak</div>
+        <div class="dashboard-card-value" style="color:#f59e0b">${streakCount}</div>
+        <div class="dashboard-card-desc">Days logged</div>
+      </div>
+      <div class="dashboard-card">
+        <div class="dashboard-card-label">Mind</div>
+        <div class="dashboard-card-value" style="color:rgba(255,255,255,0.3)">—</div>
+        <div class="dashboard-card-desc">Coming soon</div>
+      </div>
+    </div>
+    ${activeCats.length > 0 ? `<div class="dashboard-section-title">Active Categories</div><div class="dashboard-cat-row">${catTags}</div>` : ''}
+  `;
+
+  dashboardScreen.style.display = 'block';
+  dashboardScreen.classList.add('visible');
+
+  requestAnimationFrame(() => {
+    dashboardScreen.querySelectorAll('.dashboard-mini-gauge-fill').forEach(el => {
+      const parent = el.closest('.dashboard-card');
+      if (!parent) return;
+      const label = parent.querySelector('.dashboard-card-label');
+      if (!label) return;
+      if (label.textContent === 'Learning') el.style.width = `${avgScore}%`;
+      else if (label.textContent === 'Fitness') el.style.width = `${savedData.fitnessVal ?? 0}%`;
+    });
+  });
+}
+
 // ===== TABS =====
 document.querySelectorAll('.tab-bar button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -333,6 +407,8 @@ document.querySelectorAll('.tab-bar button').forEach(btn => {
     catScreen.style.display = 'none';
     fitnessScreen.classList.remove('visible');
     fitnessScreen.style.display = 'none';
+    dashboardScreen.classList.remove('visible');
+    dashboardScreen.style.display = 'none';
 
     // remove placeholder message if exists
     const placeholder = container.querySelector('.placeholder-msg');
@@ -348,7 +424,11 @@ document.querySelectorAll('.tab-bar button').forEach(btn => {
     container.classList.remove('visible');
     container.style.display = 'none';
 
-    if (isLearning || isHome) {
+    if (isHome) {
+      showDashboard();
+    }
+
+    if (isLearning) {
       container.style.display = '';
       container.classList.add('visible');
       document.querySelectorAll('.category-item, .welcome-text').forEach(el => {
