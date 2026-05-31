@@ -136,18 +136,6 @@ categories.forEach(cat => {
       savedData[key] = val;
       API.post(savedData);
 
-      const angle = -90 + val * 1.8;
-      const r = 100, cx = 140, cy = 140;
-      const p = (deg) => `${cx + r * Math.cos(deg * Math.PI / 180)},${cy + r * Math.sin(deg * Math.PI / 180)}`;
-      let ticks = '';
-      for (let v = 0; v <= 100; v += 25) {
-        const a = 180 + v * 1.8, rad = a * Math.PI / 180;
-        const x1 = cx + (r + 8) * Math.cos(rad), y1 = cy + (r + 8) * Math.sin(rad);
-        const x2 = cx + (r - 12) * Math.cos(rad), y2 = cy + (r - 12) * Math.sin(rad);
-        const tx = cx + (r - 28) * Math.cos(rad), ty = cy + (r - 28) * Math.sin(rad);
-        ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-                  <text x="${tx}" y="${ty + 4}" fill="rgba(255,255,255,0.4)" font-family="'Segoe UI',sans-serif" font-size="11" text-anchor="middle">${v}</text>`;
-      }
       catScreen.innerHTML = `
         <div class="top-row">
           <button class="back-btn"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15 18 L9 12 L15 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -155,17 +143,7 @@ categories.forEach(cat => {
         </div>
         <div class="scroll-wrap">
           <div class="car-gauge">
-            <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-            <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12" stroke-linecap="round"/>
-            <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#cg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="${314.16 * (1 - val / 100)}"/>
-              <linearGradient id="cg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
-              ${ticks}
-              <g class="needle spring" style="transform: rotate(-90deg); transform-origin: 140px 140px;">
-                <polygon points="${cx},${cy} ${cx - 4},${cy - 60} ${cx},${cy - 75} ${cx + 4},${cy - 60}" fill="#ffffff"/>
-                <circle cx="${cx}" cy="${cy}" r="5" fill="#ffffff"/>
-              </g>
-              <text x="${cx}" y="${cy + 65}" class="value-text pulse" fill="${val < 50 ? '#ef4444' : val > 50 ? '#22c55e' : '#f59e0b'}" font-size="28">${val}</text>
-            </svg>
+            ${gaugeSVG(val, 'cg')}
           </div>
           <div class="spacer"></div>
         </div>`;
@@ -208,6 +186,51 @@ categories.forEach(cat => {
   container.appendChild(div);
 });
 
+// ===== SHARED GAUGE SVG =====
+function gaugeSVG(val, id) {
+  const angle = -90 + val * 1.8;
+  const r = 100, gcx = 140, gcy = 140;
+  const p = (deg) => `${gcx + r * Math.cos(deg * Math.PI / 180)},${gcy + r * Math.sin(deg * Math.PI / 180)}`;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - val / 100);
+  const color = val < 40 ? '#ef4444' : val < 70 ? '#f59e0b' : '#22c55e';
+
+  let ticks = '';
+  for (let v = 0; v <= 100; v += 25) {
+    const a = 180 + v * 1.8, rad = a * Math.PI / 180;
+    const tx = gcx + (r - 28) * Math.cos(rad), ty = gcy + (r - 28) * Math.sin(rad);
+    const dotX = gcx + (r + 4) * Math.cos(rad), dotY = gcy + (r + 4) * Math.sin(rad);
+    ticks += `<circle cx="${dotX}" cy="${dotY}" r="3" fill="rgba(255,255,255,${v === 0 || v === 100 ? 0.4 : 0.2})"/>
+              <text x="${tx}" y="${ty + 4}" fill="rgba(255,255,255,0.35)" font-family="'SF Mono',monospace" font-size="11" text-anchor="middle" font-weight="500">${v}</text>`;
+  }
+
+  return `<svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g-${id}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#ef4444"/>
+        <stop offset="50%" stop-color="#f59e0b"/>
+        <stop offset="100%" stop-color="#22c55e"/>
+      </linearGradient>
+      <filter id="g-glow-${id}">
+        <feGaussianBlur stdDeviation="4" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" opacity="0.3" filter="url(#g-glow-${id})"/>
+    <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#g-${id})" stroke-width="14" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" filter="url(#g-glow-${id})"/>
+    ${ticks}
+    <circle cx="40" cy="140" r="4" fill="rgba(255,255,255,0.1)"/>
+    <circle cx="240" cy="140" r="4" fill="${color}" opacity="0.4"/>
+    <g class="needle spring" style="transform: rotate(-90deg); transform-origin: ${gcx}px ${gcy}px;">
+      <polygon points="${gcx},${gcy} ${gcx - 3},${gcy - 55} ${gcx},${gcy - 70} ${gcx + 3},${gcy - 55}" fill="#ffffff"/>
+      <circle cx="${gcx}" cy="${gcy}" r="5" fill="#ffffff"/>
+      <circle cx="${gcx}" cy="${gcy}" r="10" fill="rgba(255,255,255,0.08)"/>
+    </g>
+    <text x="${gcx}" y="${gcy + 60}" class="value-text" fill="${color}" font-size="30" font-weight="700" font-family="'SF Mono',monospace" letter-spacing="-0.5">${val}</text>
+  </svg>`;
+}
+
 // ===== FITNESS =====
 let fitnessVal = 42;
 
@@ -223,31 +246,9 @@ const exercises = {
 };
 
 function buildGaugeSVG(val) {
-  const angle = -90 + val * 1.8;
-  const r = 100, cx = 140, cy = 140;
-  const p = (deg) => `${cx + r * Math.cos(deg * Math.PI / 180)},${cy + r * Math.sin(deg * Math.PI / 180)}`;
-  let ticks = '';
-  for (let v = 0; v <= 100; v += 25) {
-    const a = 180 + v * 1.8, rad = a * Math.PI / 180;
-    const x1 = cx + (r + 8) * Math.cos(rad), y1 = cy + (r + 8) * Math.sin(rad);
-    const x2 = cx + (r - 12) * Math.cos(rad), y2 = cy + (r - 12) * Math.sin(rad);
-    const tx = cx + (r - 28) * Math.cos(rad), ty = cy + (r - 28) * Math.sin(rad);
-    ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-              <text x="${tx}" y="${ty + 4}" fill="rgba(255,255,255,0.4)" font-family="'Segoe UI',sans-serif" font-size="11" text-anchor="middle">${v}</text>`;
-  }
   return `<div class="scroll-wrap">
     <div class="car-gauge">
-      <svg viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-        <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12" stroke-linecap="round"/>
-        <path d="M ${p(180)} A ${r} ${r} 0 0 1 ${p(0)}" fill="none" stroke="url(#fg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="${314.16 * (1 - val / 100)}"/>
-        <linearGradient id="fg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
-        ${ticks}
-        <g class="needle spring" style="transform: rotate(-90deg); transform-origin: ${cx}px ${cy}px;">
-          <polygon points="${cx},${cy} ${cx - 4},${cy - 60} ${cx},${cy - 75} ${cx + 4},${cy - 60}" fill="#ffffff"/>
-          <circle cx="${cx}" cy="${cy}" r="5" fill="#ffffff"/>
-        </g>
-        <text x="${cx}" y="${cy + 65}" class="value-text" fill="${val < 50 ? '#ef4444' : val > 50 ? '#22c55e' : '#f59e0b'}" font-size="28">${val}</text>
-      </svg>
+      ${gaugeSVG(val, 'fg')}
     </div>
     ${(() => {
       const today = new Date().getDay();
