@@ -434,6 +434,41 @@ body { position: relative; }
 .exercise-item {
     animation: fadeInItem 0.3s ease forwards;
     opacity: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: opacity 0.3s ease;
+}
+
+.exercise-item.completed {
+    opacity: 0.5;
+}
+
+.exercise-item.completed .hover-pop {
+    text-decoration: line-through;
+    text-decoration-color: rgba(255,255,255,0.3);
+}
+
+.exercise-item:hover:not(.completed) {
+    opacity: 1;
+}
+
+.exercise-item:hover .ex-check {
+    transform: scale(1.2);
+}
+
+.ex-check {
+    font-size: 24px;
+    color: rgba(255,255,255,0.3);
+    transition: transform 0.2s ease, color 0.3s ease;
+    flex-shrink: 0;
+    width: 28px;
+    text-align: center;
+}
+
+.exercise-item.completed .ex-check {
+    color: #22c55e;
 }
 
 @keyframes fadeInItem {

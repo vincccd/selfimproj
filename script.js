@@ -243,31 +243,51 @@ const exercises = {
   Run:['5K Run','Intervals','Hill Sprints','Cool Down']
 };
 
-function buildGaugeSVG(val) {
+function getTodayExercises() {
+  const today = new Date().getDay();
+  const list = [];
+  (workoutMap[today] || '').split(',').forEach(m => (exercises[m] || []).forEach(ex => list.push(ex)));
+  return list;
+}
+
+function buildGaugeSVG(val, todayLog) {
+  const today = new Date().getDay();
+  const workout = workoutMap[today];
+  const muscles = workout.split(',');
+  let exList = '';
+  let exIdx = 0;
+  let doneCount = 0;
+  muscles.forEach(m => {
+    (exercises[m] || []).forEach(ex => {
+      const done = todayLog[ex] || false;
+      if (done) doneCount++;
+      exList += `<div class="exercise-item${done ? ' completed' : ''}" data-exercise="${ex}" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:32px;color:rgba(255,255,255,0.8);animation-delay:${exIdx * 0.08}s;">
+        <span class="ex-check">${done ? '✓' : '○'}</span>
+        <span class="hover-pop">${ex}</span>
+      </div>`;
+      exIdx++;
+    });
+  });
+  const totalExs = exIdx;
+  const pct = totalExs > 0 ? Math.round((doneCount / totalExs) * 100) : 0;
   return `<div class="scroll-wrap">
     <div class="car-gauge">
       ${gaugeSVG(val, 'fg')}
     </div>
-    ${(() => {
-      const today = new Date().getDay();
-      const workout = workoutMap[today];
-      const muscles = workout.split(',');
-      let exList = '';
-      let exIdx = 0;
-      muscles.forEach(m => {
-        (exercises[m] || []).forEach(ex => {
-          exList += `<div class="exercise-item" style="padding:20px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:32px;color:rgba(255,255,255,0.8);animation-delay:${exIdx * 0.08}s;"><span class="hover-pop">${ex}</span></div>`;
-          exIdx++;
-        });
-      });
-      return `<div style="display:flex;gap:12px;width:100%;margin:32px auto 0;padding:0 16px;box-sizing:border-box;">
+    <div style="display:flex;gap:12px;width:100%;margin:32px auto 0;padding:0 16px;box-sizing:border-box;">
       <div class="fitness-board-anim today-board" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:24px;display:flex;flex-direction:column;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span class="hover-pop" style="font-size:56px;color:#fff;font-weight:600;">${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][today]}</span>
           <span class="hover-pop" style="font-size:28px;color:rgba(255,255,255,0.5);">${(new Date().getMonth()+1).toString().padStart(2,'0')}.${new Date().getDate().toString().padStart(2,'0')}</span>
         </div>
         <div class="hover-pop" style="margin-top:4px;font-size:28px;color:rgba(255,255,255,0.7);">${workout}</div>
-        <div style="margin-top:16px;">${exList}</div>
+        <div class="fitness-progress" style="margin-top:16px;padding:12px 0 4px;">
+          <div class="fitness-progress-text" style="font-size:18px;color:rgba(255,255,255,0.6);margin-bottom:10px;">${doneCount} / ${totalExs} exercises</div>
+          <div class="fitness-progress-bar" style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+            <div class="fitness-progress-fill" style="height:100%;width:${pct}%;background:linear-gradient(90deg,#3b82f6,#22c55e);border-radius:3px;transition:width 0.4s ease;"></div>
+          </div>
+        </div>
+        <div class="fitness-ex-list" style="margin-top:8px;">${exList}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;flex:1;">
         <div class="fitness-board-anim streak-board" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;display:flex;flex-direction:column;animation-delay:0.05s;">
@@ -291,15 +311,69 @@ function buildGaugeSVG(val) {
           <span style="font-size:14px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;text-align:center;">Progress<br>Picture</span>
         </div>
       </div>
-    </div>`;})()}
+    </div>
     <div style="height:80px;"></div>
   </div>`;
 }
 
+function updateFitnessUI(exName) {
+  const item = exName ? fitnessScreen.querySelector(`[data-exercise="${exName}"]`) : null;
+  if (item) {
+    const done = item.classList.toggle('completed');
+    item.querySelector('.ex-check').textContent = done ? '✓' : '○';
+  }
+  const allExs = getTodayExercises();
+  const todayStr = new Date().toISOString().slice(0,10);
+  const log = (savedData.fitnessLog || {})[todayStr] || {};
+  const done = allExs.filter(ex => log[ex]).length;
+  const total = allExs.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const progressText = fitnessScreen.querySelector('.fitness-progress-text');
+  if (progressText) progressText.textContent = `${done} / ${total} exercises`;
+  const progressFill = fitnessScreen.querySelector('.fitness-progress-fill');
+  if (progressFill) progressFill.style.width = `${pct}%`;
+  const valText = fitnessScreen.querySelector('.value-text');
+  if (valText) {
+    valText.textContent = fitnessVal;
+    valText.style.fill = fitnessVal < 40 ? '#ef4444' : fitnessVal < 70 ? '#f59e0b' : '#22c55e';
+    valText.classList.remove('pulse');
+    void valText.offsetWidth;
+    valText.classList.add('pulse');
+  }
+  const needle = fitnessScreen.querySelector('.needle');
+  if (needle) {
+    needle.getAnimations().forEach(a => a.cancel());
+    needle.animate([
+      { transform: `rotate(${-90 + (fitnessVal - 1) * 1.8}deg)` },
+      { transform: `rotate(${-90 + fitnessVal * 1.8}deg)` }
+    ], { duration: 800, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' });
+  }
+}
+
 function showFitness() {
-  fitnessScreen.innerHTML = buildGaugeSVG(fitnessVal);
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayLog = (savedData.fitnessLog || {})[todayStr] || {};
+  fitnessScreen.innerHTML = buildGaugeSVG(fitnessVal, todayLog);
   fitnessScreen.style.display = 'block';
   fitnessScreen.classList.add('visible');
+
+  if (fitnessScreen._exHandler) fitnessScreen.removeEventListener('click', fitnessScreen._exHandler);
+  fitnessScreen._exHandler = (e) => {
+    const item = e.target.closest('[data-exercise]');
+    if (!item) return;
+    const exName = item.dataset.exercise;
+    if (!savedData.fitnessLog) savedData.fitnessLog = {};
+    if (!savedData.fitnessLog[todayStr]) savedData.fitnessLog[todayStr] = {};
+    savedData.fitnessLog[todayStr][exName] = !savedData.fitnessLog[todayStr][exName];
+    const allExs = getTodayExercises();
+    const log = savedData.fitnessLog[todayStr];
+    const done = allExs.filter(ex => log[ex]).length;
+    fitnessVal = allExs.length > 0 ? Math.round((done / allExs.length) * 100) : fitnessVal;
+    savedData.fitnessVal = fitnessVal;
+    API.post(savedData);
+    updateFitnessUI(exName);
+  };
+  fitnessScreen.addEventListener('click', fitnessScreen._exHandler);
 
   requestAnimationFrame(() => {
     const needle = fitnessScreen.querySelector('.needle');
@@ -469,6 +543,14 @@ document.querySelectorAll('.tab-bar button').forEach(btn => {
 API.get().then(d => {
   savedData = d;
   if (d.fitnessVal !== undefined) fitnessVal = d.fitnessVal;
+  const todayStr = new Date().toISOString().slice(0,10);
+  const todayLog = (d.fitnessLog || {})[todayStr] || {};
+  const todayExs = getTodayExercises();
+  if (todayExs.length > 0) {
+    const done = todayExs.filter(ex => todayLog[ex]).length;
+    fitnessVal = Math.round((done / todayExs.length) * 100);
+    if (d.fitnessVal === undefined) d.fitnessVal = fitnessVal;
+  }
   isLoading = false;
 
   loadingOverlay.classList.add('hidden');
