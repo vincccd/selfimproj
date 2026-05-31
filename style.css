@@ -524,6 +524,12 @@ body { position: relative; }
     background-position: right 10px center;
     background-size: 10px 6px;
     transition: border-color 0.2s ease, background 0.2s ease;
+    color-scheme: dark;
+}
+
+.ex-select option {
+    color: #fff;
+    background: rgba(30,30,40,0.98);
 }
 
 .ex-select:hover {

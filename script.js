@@ -233,7 +233,7 @@ function gaugeSVG(val, id) {
 let fitnessVal = 42;
 let currentStrengthMetric = 'volume';
 let selectedExercise = '';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.19';
 const strengthMetrics = [
   { key: 'volume', label: 'Volume', color: '#8b5cf6' },
   { key: 'tonnage', label: 'Tonnage', color: '#3b82f6' },
