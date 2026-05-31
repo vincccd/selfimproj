@@ -113,9 +113,8 @@ categories.forEach(cat => {
     document.querySelectorAll('.category-item').forEach(el => {
       if (el !== div) {
         el.getAnimations().forEach(a => a.cancel());
-        el.style.animation = '';
+        el.style.cssText = '';
         el.classList.add('hiding');
-        el.style.cssText += 'opacity:0;transform:scale(0.8);';
       }
     });
     const rect = div.getBoundingClientRect();
@@ -200,9 +199,7 @@ categories.forEach(cat => {
         container.classList.add('visible');
         document.querySelectorAll('.category-item').forEach(el => {
           el.getAnimations().forEach(anim => anim.cancel());
-          el.style.animation = '';
-          el.style.opacity = '';
-          el.style.transform = '';
+          el.style.cssText = '';
           el.classList.remove('hiding');
         });
       });
@@ -433,9 +430,7 @@ document.querySelectorAll('.tab-bar button').forEach(btn => {
       container.classList.add('visible');
       document.querySelectorAll('.category-item, .welcome-text').forEach(el => {
         el.getAnimations().forEach(anim => anim.cancel());
-        el.style.animation = '';
-        el.style.opacity = '';
-        el.style.transform = '';
+        el.style.cssText = '';
         el.classList.remove('hiding');
       });
       requestAnimationFrame(() => {
