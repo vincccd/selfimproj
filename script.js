@@ -151,12 +151,16 @@ categories.forEach(cat => {
       catScreen.classList.add('visible');
 
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const needle = catScreen.querySelector('.needle');
-          const valText = catScreen.querySelector('.value-text');
-          if (needle) needle.style.transform = `rotate(${-90 + val * 1.8}deg)`;
-          if (valText) { valText.classList.remove('pulse'); void valText.offsetWidth; valText.classList.add('pulse'); }
-        });
+        const needle = catScreen.querySelector('.needle');
+        const valText = catScreen.querySelector('.value-text');
+        if (needle) {
+          const a = -90 + val * 1.8;
+          needle.animate([
+            { transform: 'rotate(-90deg)' },
+            { transform: `rotate(${a}deg)` }
+          ], { duration: 1200, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' });
+        }
+        if (valText) { valText.classList.remove('pulse'); void valText.offsetWidth; valText.classList.add('pulse'); }
       });
 
       const onScroll = () => {
@@ -217,7 +221,7 @@ function gaugeSVG(val, id) {
     ${ticks}
     <circle cx="40" cy="140" r="4" fill="rgba(255,255,255,0.1)"/>
     <circle cx="240" cy="140" r="4" fill="${color}" opacity="0.4"/>
-    <g class="needle spring" style="transform: rotate(-90deg); transform-origin: ${gcx}px ${gcy}px;">
+    <g class="needle" style="transform-origin: ${gcx}px ${gcy}px;">
       <polygon points="${gcx},${gcy} ${gcx - 3},${gcy - 55} ${gcx},${gcy - 70} ${gcx + 3},${gcy - 55}" fill="#ffffff"/>
       <circle cx="${gcx}" cy="${gcy}" r="5" fill="#ffffff"/>
     </g>
@@ -298,10 +302,14 @@ function showFitness() {
   fitnessScreen.classList.add('visible');
 
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const needle = fitnessScreen.querySelector('.needle');
-      if (needle) needle.style.transform = `rotate(${-90 + fitnessVal * 1.8}deg)`;
-    });
+    const needle = fitnessScreen.querySelector('.needle');
+    if (needle) {
+      const a = -90 + fitnessVal * 1.8;
+      needle.animate([
+        { transform: 'rotate(-90deg)' },
+        { transform: `rotate(${a}deg)` }
+      ], { duration: 1200, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' });
+    }
   });
   savedData.fitnessVal = fitnessVal;
   API.post(savedData);
