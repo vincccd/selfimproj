@@ -169,8 +169,8 @@ function shortName(name) {
 function applyZoom() {
   const web = document.querySelector('.tree-web');
   const svg = document.querySelector('.tree-svg');
-  const base = parseFloat(web.dataset.baseH) || parseFloat(web.dataset.naturalH) || web.scrollHeight;
-  const baseW = web.dataset.baseW ? parseFloat(web.dataset.baseW) : web.parentElement.clientWidth;
+  const base = parseFloat(web.dataset.baseH) || web.scrollHeight;
+  const baseW = parseFloat(web.dataset.baseW) || web.parentElement.clientWidth;
 
   for (const id in skillPositions) {
     const sp = skillPositions[id];
@@ -204,7 +204,7 @@ function buildTree() {
       if (s.l>maxL[cat]) maxL[cat]=s.l;
 
   const padX = 50;
-  const colW = (container.clientWidth-padX*2)/3;
+  const colW = Math.max(0, (container.clientWidth-padX*2)/3);
   const startY = 40;
   const levelH = 48;
 
@@ -276,11 +276,6 @@ function buildTree() {
 
 function drawLines() {
   const svg = document.querySelector('.tree-svg');
-  const web = document.querySelector('.tree-web');
-  const naturalH = parseFloat(web.dataset.naturalH) || web.scrollHeight;
-  const parentW = web.parentElement.clientWidth;
-  svg.setAttribute('width', parentW);
-  svg.setAttribute('height', naturalH);
   svg.innerHTML = '';
 
   const ns = 'http://www.w3.org/2000/svg';
@@ -304,6 +299,7 @@ function drawLines() {
 
     const fs = getSkill(fromId);
     const ts = getSkill(toId);
+    if (!fs||!ts) continue;
     const cross = fs.cat!==ts.cat;
 
     const line = document.createElementNS(ns,'line');
@@ -333,7 +329,7 @@ tabs.forEach(tab => {
     if (tab.classList.contains('home-tab')) document.querySelector('.home-page').classList.add('active');
     if (tab.classList.contains('skilltree-tab')) {
       document.querySelector('.skilltree-page').classList.add('active');
-      buildTree();
+      requestAnimationFrame(() => buildTree());
     }
   });
 });
@@ -341,7 +337,11 @@ tabs.forEach(tab => {
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  if (drawn) resizeTimer = setTimeout(() => drawLines(), 200);
+  if (drawn) resizeTimer = setTimeout(() => {
+    const web = document.querySelector('.tree-web');
+    web.dataset.baseW = web.parentElement.clientWidth;
+    applyZoom();
+  }, 200);
 });
 
 const treeContainer = document.querySelector('.tree-container');
@@ -357,4 +357,8 @@ treeContainer.addEventListener('wheel', (e) => {
   zoomTimer = setTimeout(() => applyZoom(), 10);
 }, { passive: false });
 
-document.querySelector('.skilltree-tab').click();
+document.querySelector('.home-tab').classList.remove('active');
+document.querySelector('.skilltree-tab').classList.add('active');
+document.querySelector('.home-page').classList.remove('active');
+document.querySelector('.skilltree-page').classList.add('active');
+requestAnimationFrame(() => buildTree());
