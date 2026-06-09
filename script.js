@@ -160,11 +160,7 @@ let drawn = false;
 let animFrame = null;
 let zoom = 1;
 
-function shortName(name) {
-  const words = name.split(' ');
-  if (words.length===1) return name.slice(0,4);
-  return words.map(w=>w[0]).join('').slice(0,4).toUpperCase();
-}
+
 
 function applyZoom() {
   const web = document.querySelector('.tree-web');
@@ -246,14 +242,8 @@ function buildTree() {
 
       const circle = document.createElement('div');
       circle.className = `skill-node ${cat}`;
-      circle.textContent = shortName(s.name);
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'skill-name';
-      nameEl.textContent = s.name;
-
+      circle.textContent = s.name;
       wrap.appendChild(circle);
-      wrap.appendChild(nameEl);
       container.appendChild(wrap);
       nodeMap[s.id] = wrap;
     }
@@ -301,14 +291,17 @@ function drawLines() {
     if (!fs||!ts) continue;
     const cross = fs.cat!==ts.cat;
 
-    const line = document.createElementNS(ns,'line');
-    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
-    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
-    line.setAttribute('stroke', cross ? 'rgba(255,255,255,0.12)' : catCfg[fs.cat].color);
-    line.setAttribute('stroke-opacity', cross ? '0.4' : '0.18');
-    line.setAttribute('stroke-width', cross ? '1' : '1.2');
-    line.setAttribute('filter','url(#g)');
-    svg.appendChild(line);
+    const midY = (y1 + y2) / 2;
+    const dx = Math.abs(x2 - x1) * 0.3;
+    const path = document.createElementNS(ns,'path');
+    const d = `M ${x1} ${y1} C ${x1} ${midY + dx}, ${x2} ${midY - dx}, ${x2} ${y2}`;
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', cross ? 'rgba(255,255,255,0.08)' : catCfg[fs.cat].color);
+    path.setAttribute('stroke-opacity', cross ? '0.35' : '0.15');
+    path.setAttribute('stroke-width', cross ? '1' : '1.2');
+    path.setAttribute('filter','url(#g)');
+    svg.appendChild(path);
   }
 }
 
@@ -353,7 +346,7 @@ treeContainer.addEventListener('wheel', (e) => {
   if (newZoom === zoom) return;
   zoom = newZoom;
   clearTimeout(zoomTimer);
-  zoomTimer = setTimeout(() => applyZoom(), 10);
+  zoomTimer = requestAnimationFrame(() => applyZoom());
 }, { passive: false });
 
 document.querySelector('.home-tab').classList.remove('active');
