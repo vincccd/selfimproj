@@ -155,8 +155,10 @@ const tree = {
 
 const catCfg = { push:{color:'#89CFF0',label:'Push'}, pull:{color:'#FFB6C1',label:'Pull'}, core:{color:'#C8FFC8',label:'Core'} };
 const nodeMap = {};
+const skillPositions = {};
 let drawn = false;
 let animFrame = null;
+let zoom = 1;
 
 function shortName(name) {
   const words = name.split(' ');
@@ -164,14 +166,36 @@ function shortName(name) {
   return words.map(w=>w[0]).join('').slice(0,4).toUpperCase();
 }
 
+function applyZoom() {
+  const web = document.querySelector('.tree-web');
+  const svg = document.querySelector('.tree-svg');
+  const base = parseFloat(web.dataset.baseH) || parseFloat(web.dataset.naturalH) || web.scrollHeight;
+  const baseW = web.dataset.baseW ? parseFloat(web.dataset.baseW) : web.parentElement.clientWidth;
+
+  for (const id in skillPositions) {
+    const sp = skillPositions[id];
+    const wrap = nodeMap[id];
+    if (!wrap) continue;
+    wrap.style.left = (sp.baseX * zoom) + 'px';
+    wrap.style.top = (sp.baseY * zoom) + 'px';
+  }
+
+  web.style.height = (base * zoom) + 'px';
+  svg.setAttribute('width', baseW * zoom);
+  svg.setAttribute('height', base * zoom);
+  drawLines();
+}
+
 function buildTree() {
   drawn = false;
   if (animFrame) cancelAnimationFrame(animFrame);
+  zoom = 1;
   const container = document.querySelector('.tree-web');
   const svg = document.querySelector('.tree-svg');
   container.innerHTML = '';
   svg.innerHTML = '';
   for (const id in nodeMap) delete nodeMap[id];
+  for (const id in skillPositions) delete skillPositions[id];
 
   const cats = ['push','pull','core'];
   const maxL = { push:0, pull:0, core:0 };
@@ -196,7 +220,6 @@ function buildTree() {
     }
     for (const lvl in byL) {
       const arr = byL[lvl];
-      const spread = colW*0.5;
       for (let si=0; si<arr.length; si++) {
         const s = arr[si];
         const yOff = arr.length>1 ? (si-arr.length/2)*32 : 0;
@@ -206,6 +229,7 @@ function buildTree() {
         const x = cx + xOff + rx;
         const y = startY + (parseInt(lvl)-1)*levelH + yOff + ry;
         positions[s.id] = { x, y };
+        skillPositions[s.id] = { baseX: x, baseY: y };
       }
     }
   }
@@ -214,23 +238,37 @@ function buildTree() {
     for (const s of tree[cat]) {
       const p = positions[s.id];
       if (!p) continue;
-      const el = document.createElement('div');
-      el.className = `skill-node ${cat}`;
-      el.textContent = shortName(s.name);
-      el.style.left = p.x+'px';
-      el.style.top = p.y+'px';
-      el.style.transform = 'translate(-50%,-50%)';
-      el.dataset.id = s.id;
-      const label = document.createElement('span');
-      label.className = 'label';
-      label.textContent = s.name;
-      el.appendChild(label);
-      container.appendChild(el);
-      nodeMap[s.id] = el;
+      const wrap = document.createElement('div');
+      wrap.className = 'skill-wrap';
+      wrap.style.left = (p.x * zoom)+'px';
+      wrap.style.top = (p.y * zoom)+'px';
+      wrap.dataset.id = s.id;
+
+      const circle = document.createElement('div');
+      circle.className = `skill-node ${cat}`;
+      circle.textContent = shortName(s.name);
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'skill-name';
+      nameEl.textContent = s.name;
+
+      wrap.appendChild(circle);
+      wrap.appendChild(nameEl);
+      container.appendChild(wrap);
+      nodeMap[s.id] = wrap;
     }
   }
 
-  container.style.height = (startY + 14*levelH + 80)+'px';
+  const naturalH = startY + 14*levelH + 100;
+  const baseW = container.parentElement.clientWidth;
+  container.style.height = (naturalH * zoom)+'px';
+  container.dataset.naturalH = naturalH;
+  container.dataset.baseH = naturalH;
+  container.dataset.baseW = baseW;
+
+  const svg = document.querySelector('.tree-svg');
+  svg.setAttribute('width', baseW * zoom);
+  svg.setAttribute('height', naturalH * zoom);
 
   animFrame = requestAnimationFrame(() => requestAnimationFrame(() => drawLines()));
   drawn = true;
@@ -238,13 +276,11 @@ function buildTree() {
 
 function drawLines() {
   const svg = document.querySelector('.tree-svg');
-  const container = document.querySelector('.tree-container');
   const web = document.querySelector('.tree-web');
-  const cr = container.getBoundingClientRect();
-  const w = Math.max(container.scrollWidth, container.clientWidth);
-  const h = Math.max(web.scrollHeight+20, container.clientHeight);
-  svg.setAttribute('width', w);
-  svg.setAttribute('height', h);
+  const naturalH = parseFloat(web.dataset.naturalH) || web.scrollHeight;
+  const parentW = web.parentElement.clientWidth;
+  svg.setAttribute('width', parentW);
+  svg.setAttribute('height', naturalH);
   svg.innerHTML = '';
 
   const ns = 'http://www.w3.org/2000/svg';
@@ -257,16 +293,14 @@ function drawLines() {
 
   const allEdges = [...tree.edges, ...tree.crossEdges];
   for (const [fromId, toId] of allEdges) {
-    const fe = nodeMap[fromId];
-    const te = nodeMap[toId];
-    if (!fe||!te) continue;
+    const fp = skillPositions[fromId];
+    const tp = skillPositions[toId];
+    if (!fp||!tp) continue;
 
-    const fr = fe.getBoundingClientRect();
-    const tr = te.getBoundingClientRect();
-    const x1 = fr.left-cr.left+fr.width/2;
-    const y1 = fr.top-cr.top+fr.height/2+container.scrollTop;
-    const x2 = tr.left-cr.left+tr.width/2;
-    const y2 = tr.top-cr.top+tr.height/2+container.scrollTop;
+    const x1 = fp.baseX * zoom;
+    const y1 = fp.baseY * zoom;
+    const x2 = tp.baseX * zoom;
+    const y2 = tp.baseY * zoom;
 
     const fs = getSkill(fromId);
     const ts = getSkill(toId);
@@ -309,5 +343,18 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   if (drawn) resizeTimer = setTimeout(() => drawLines(), 200);
 });
+
+const treeContainer = document.querySelector('.tree-container');
+let zoomTimer;
+treeContainer.addEventListener('wheel', (e) => {
+  if (!drawn) return;
+  e.preventDefault();
+  const delta = e.deltaY>0 ? 0.92 : 1.08;
+  const newZoom = Math.max(0.3, Math.min(3, zoom * delta));
+  if (newZoom === zoom) return;
+  zoom = newZoom;
+  clearTimeout(zoomTimer);
+  zoomTimer = setTimeout(() => applyZoom(), 10);
+}, { passive: false });
 
 document.querySelector('.skilltree-tab').click();
