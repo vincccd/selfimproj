@@ -266,7 +266,6 @@ function buildTree() {
   container.dataset.baseH = naturalH;
   container.dataset.baseW = baseW;
 
-  const svg = document.querySelector('.tree-svg');
   svg.setAttribute('width', baseW * zoom);
   svg.setAttribute('height', naturalH * zoom);
 
