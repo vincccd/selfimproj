@@ -337,6 +337,31 @@ window.addEventListener('resize', () => {
 });
 
 const treeContainer = document.querySelector('.tree-container');
+let panning = false, panStartX, panStartY, panScrollX, panScrollY;
+treeContainer.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  panning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panScrollX = treeContainer.scrollLeft;
+  panScrollY = treeContainer.scrollTop;
+  treeContainer.style.cursor = 'grabbing';
+  treeContainer.style.userSelect = 'none';
+});
+window.addEventListener('mousemove', (e) => {
+  if (!panning) return;
+  const dx = e.clientX - panStartX;
+  const dy = e.clientY - panStartY;
+  treeContainer.scrollLeft = panScrollX - dx;
+  treeContainer.scrollTop = panScrollY - dy;
+});
+window.addEventListener('mouseup', () => {
+  if (!panning) return;
+  panning = false;
+  treeContainer.style.cursor = '';
+  treeContainer.style.userSelect = '';
+});
+
 let zoomTimer;
 treeContainer.addEventListener('wheel', (e) => {
   if (!drawn) return;
