@@ -199,16 +199,16 @@ function buildTree() {
     for (const s of tree[cat])
       if (s.l>maxL[cat]) maxL[cat]=s.l;
 
-  const padX = 50;
-  const colW = Math.max(0, (container.clientWidth-padX*2)/3);
-  const startY = 40;
-  const levelH = 48;
+  const padX = 30;
+  const availW = Math.max(200, container.clientWidth - padX*2);
+  const startY = 60;
+  const levelH = 76;
 
   const positions = {};
 
   for (let ci=0; ci<cats.length; ci++) {
     const cat = cats[ci];
-    const cx = padX + colW*(ci+0.5);
+    const cx = padX + availW * (0.15 + 0.7 * Math.random());
     const byL = {};
     for (const s of tree[cat]) {
       if (!byL[s.l]) byL[s.l]=[];
@@ -218,10 +218,10 @@ function buildTree() {
       const arr = byL[lvl];
       for (let si=0; si<arr.length; si++) {
         const s = arr[si];
-        const yOff = arr.length>1 ? (si-arr.length/2)*32 : 0;
-        const xOff = arr.length>1 ? (si-arr.length/2)*20 : 0;
-        const rx = (Math.random()-0.5)*12;
-        const ry = (Math.random()-0.5)*8;
+        const yOff = (si - (arr.length-1)/2) * 38;
+        const xOff = (Math.random()-0.5) * availW * 0.55;
+        const rx = (Math.random()-0.5)*20;
+        const ry = (Math.random()-0.5)*14;
         const x = cx + xOff + rx;
         const y = startY + (parseInt(lvl)-1)*levelH + yOff + ry;
         positions[s.id] = { x, y };
@@ -229,6 +229,9 @@ function buildTree() {
       }
     }
   }
+
+  const maxY = Math.max(...Object.values(positions).map(p => p.y));
+  const minY = Math.min(...Object.values(positions).map(p => p.y));
 
   for (const cat of cats) {
     for (const s of tree[cat]) {
@@ -249,7 +252,7 @@ function buildTree() {
     }
   }
 
-  const naturalH = startY + 14*levelH + 100;
+  const naturalH = maxY + 120;
   const baseW = container.parentElement.clientWidth;
   container.style.height = (naturalH * zoom)+'px';
   container.dataset.naturalH = naturalH;
@@ -271,7 +274,7 @@ function drawLines() {
   const defs = document.createElementNS(ns,'defs');
   const f = document.createElementNS(ns,'filter');
   f.setAttribute('id','g');
-  f.innerHTML = '<feGaussianBlur stdDeviation="1"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>';
+  f.innerHTML = '<feGaussianBlur stdDeviation="1.5"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>';
   defs.appendChild(f);
   svg.appendChild(defs);
 
